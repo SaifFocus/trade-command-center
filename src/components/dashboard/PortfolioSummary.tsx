@@ -1,9 +1,14 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { MARKETS } from "@/lib/dashboard-data";
+import type { Market } from "@/lib/dashboard-data";
 
-export function PortfolioSummary() {
-  const total = MARKETS.reduce((a, m) => a + m.seed, 0);
-  const data = MARKETS.map((m) => ({ name: m.name, value: m.seed, color: m.color }));
+export function PortfolioSummary({ markets }: { markets: Market[] }) {
+  const totalDeployed = markets.reduce((a, m) => a + m.seed, 0);
+  const totalCurrent = markets.reduce((a, m) => a + m.current, 0);
+  const pnl = totalCurrent - totalDeployed;
+  const pnlPct = totalDeployed > 0 ? (pnl / totalDeployed) * 100 : 0;
+  const best = markets.slice().sort((a, b) => (b.current - b.seed) - (a.current - a.seed))[0];
+
+  const data = markets.map((m) => ({ name: m.name, value: m.seed, color: m.color }));
 
   const stat = (label: string, val: React.ReactNode, cls = "") => (
     <div className="flex items-baseline justify-between border-b border-border/50 py-2">
@@ -11,6 +16,8 @@ export function PortfolioSummary() {
       <span className={`tabular-nums text-sm ${cls}`}>{val}</span>
     </div>
   );
+
+  const pnlCls = pnl >= 0 ? "text-neon" : "text-destructive";
 
   return (
     <section className="panel rounded-lg p-4 h-[420px] flex flex-col">
@@ -23,11 +30,15 @@ export function PortfolioSummary() {
 
       <div className="grid grid-cols-2 gap-4 flex-1 min-h-0">
         <div className="flex flex-col">
-          {stat("TOTAL DEPLOYED", <span className="text-gold">{total} SEK</span>)}
-          {stat("TOTAL P&L", <span className="text-neon">+0.00 SEK (0.00%)</span>)}
-          {stat("ACTIVE TRADES", "0")}
-          {stat("WIN RATE", "— %")}
-          {stat("BEST PERFORMER", "—")}
+          {stat("TOTAL DEPLOYED", <span className="text-gold">{totalDeployed.toFixed(0)} SEK</span>)}
+          {stat(
+            "TOTAL P&L",
+            <span className={pnlCls}>
+              {pnl >= 0 ? "+" : ""}{pnl.toFixed(2)} SEK ({pnl >= 0 ? "+" : ""}{pnlPct.toFixed(2)}%)
+            </span>,
+          )}
+          {stat("ACTIVE MARKETS", String(markets.length))}
+          {stat("BEST PERFORMER", best ? best.name : "—")}
           {stat("MODE", <span className="text-gold">PAPER</span>)}
         </div>
         <div className="relative">
@@ -44,7 +55,7 @@ export function PortfolioSummary() {
           </ResponsiveContainer>
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
             <div className="text-[10px] tracking-widest text-muted-foreground">ALLOCATION</div>
-            <div className="text-gold font-display text-lg">{total}</div>
+            <div className="text-gold font-display text-lg">{totalDeployed.toFixed(0)}</div>
             <div className="text-[10px] text-muted-foreground">SEK</div>
           </div>
         </div>
