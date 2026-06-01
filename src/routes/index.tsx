@@ -5,7 +5,8 @@ import { MarketCard } from "@/components/dashboard/MarketCard";
 import { ActivityLog } from "@/components/dashboard/ActivityLog";
 import { PortfolioSummary } from "@/components/dashboard/PortfolioSummary";
 import { TradesTable } from "@/components/dashboard/TradesTable";
-import { MARKETS } from "@/lib/dashboard-data";
+import { usePortfolio } from "@/hooks/usePortfolio";
+import { useTrades } from "@/hooks/useTrades";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -20,24 +21,35 @@ export const Route = createFileRoute("/")({
 });
 
 function Dashboard() {
-  const portfolio = MARKETS.reduce((a, m) => a + m.current, 0);
+  const { markets, logs, milestones, totalSek, loading } = usePortfolio();
+  const { trades } = useTrades();
+
+  const portfolio = totalSek > 0 ? totalSek : 850;
 
   return (
-    <div className="min-h-screen">
+    <div className={`min-h-screen transition-opacity duration-500 ${loading ? "opacity-50" : "opacity-100"}`}>
       <Header portfolio={portfolio} />
-      <MilestoneBar value={portfolio} />
+      <MilestoneBar value={portfolio} milestones={milestones} />
+
+      {loading && (
+        <div className="mx-auto max-w-[1600px] px-6 pt-6">
+          <div className="panel rounded-lg px-4 py-3 text-xs tracking-[0.3em] text-neon font-mono">
+            CONNECTING TO DATABASE...
+          </div>
+        </div>
+      )}
 
       <main className="mx-auto max-w-[1600px] px-6 py-6 space-y-6">
         <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {MARKETS.map((m) => <MarketCard key={m.id} m={m} />)}
+          {markets.map((m) => <MarketCard key={m.id} m={m} />)}
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2"><ActivityLog /></div>
-          <PortfolioSummary />
+          <div className="lg:col-span-2"><ActivityLog logs={logs} /></div>
+          <PortfolioSummary markets={markets} />
         </section>
 
-        <TradesTable />
+        <TradesTable trades={trades} />
 
         <footer className="text-center text-[10px] tracking-[0.3em] text-muted-foreground pt-4 pb-8">
           APEX v0.1.0 · PAPER MODE · ALL SYSTEMS NOMINAL

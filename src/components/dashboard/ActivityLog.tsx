@@ -1,42 +1,16 @@
-import { useEffect, useRef, useState } from "react";
-import { SEED_LOG_LINES } from "@/lib/dashboard-data";
+import { useEffect, useRef } from "react";
 import { Terminal } from "lucide-react";
+import type { LogEntry } from "@/lib/dashboard-data";
 
-function ts() {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}`;
-}
-
-const POOL = [
-  ...SEED_LOG_LINES,
-  "📊 Scanner — 132 candles processed (eth-sek-1m)",
-  "🧮 Strategy — RSI(14)=42.1, MACD bearish cross detected",
-  "🛡️ Risk Agent — Position size approved: 0.4% NAV",
-  "🤖 Orchestrator — Heartbeat ok · 6/6 agents healthy",
-  "🔔 Alert — Sentiment spike on $SOL — confidence 0.71",
-  "🧠 LLM — Context window 14k/32k · cost €0.0021",
-];
-
-export function ActivityLog() {
-  const [lines, setLines] = useState<{ t: string; msg: string }[]>(() =>
-    SEED_LOG_LINES.slice(0, 4).map((msg) => ({ t: ts(), msg }))
-  );
+export function ActivityLog({ logs }: { logs: LogEntry[] }) {
   const boxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setLines((prev) => {
-        const msg = POOL[Math.floor(Math.random() * POOL.length)];
-        const next = [...prev, { t: ts(), msg }];
-        return next.slice(-80);
-      });
-    }, 2200);
-    return () => clearInterval(id);
-  }, []);
-
-  useEffect(() => {
     boxRef.current?.scrollTo({ top: boxRef.current.scrollHeight, behavior: "smooth" });
-  }, [lines]);
+  }, [logs]);
+
+  const now = new Date();
+  const nowTs = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
 
   return (
     <section className="panel rounded-lg overflow-hidden flex flex-col h-[420px]">
@@ -52,13 +26,24 @@ export function ActivityLog() {
         </div>
       </div>
       <div ref={boxRef} className="flex-1 overflow-y-auto bg-terminal p-3 font-mono text-[12px] leading-relaxed scanline relative">
-        {lines.map((l, i) => (
-          <div key={i} className="text-neon/90">
-            <span className="text-muted-foreground">[{l.t}]</span> {l.msg}
-          </div>
-        ))}
+        {logs.length === 0 && (
+          <div className="text-muted-foreground">[--:--:--] Waiting for agent activity…</div>
+        )}
+        {logs.map((l) => {
+          const cls =
+            l.level === "ERROR" ? "text-destructive" :
+            l.level === "WARN"  ? "text-gold" :
+            "text-neon/90";
+          return (
+            <div key={l.id} className={cls}>
+              <span className="text-muted-foreground">[{l.t}]</span>{" "}
+              <span className="text-muted-foreground/70">{l.agent} —</span> {l.message}
+            </div>
+          );
+        })}
         <div className="text-neon">
-          <span className="text-muted-foreground">[{ts()}]</span> <span className="inline-block w-2 h-3.5 bg-neon align-middle pulse-dot" />
+          <span className="text-muted-foreground">[{nowTs}]</span>{" "}
+          <span className="inline-block w-2 h-3.5 bg-neon align-middle pulse-dot" />
         </div>
       </div>
     </section>
