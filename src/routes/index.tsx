@@ -1,29 +1,48 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Header } from "@/components/dashboard/Header";
+import { MilestoneBar } from "@/components/dashboard/MilestoneBar";
+import { MarketCard } from "@/components/dashboard/MarketCard";
+import { ActivityLog } from "@/components/dashboard/ActivityLog";
+import { PortfolioSummary } from "@/components/dashboard/PortfolioSummary";
+import { TradesTable } from "@/components/dashboard/TradesTable";
+import { MARKETS } from "@/lib/dashboard-data";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Your App" },
-      { name: "description", content: "Replace this with a one-sentence description of your app." },
-      { property: "og:title", content: "Your App" },
-      { property: "og:description", content: "Replace this with a one-sentence description of your app." },
+      { title: "APEX — Autonomous Trading System" },
+      { name: "description", content: "APEX autonomous multi-agent trading system dashboard — 850 SEK seed capital mission to 1M SEK." },
+      { property: "og:title", content: "APEX — Autonomous Trading System" },
+      { property: "og:description", content: "Multi-agent trading dashboard. Paper-mode active." },
     ],
   }),
-  component: Index,
+  component: Dashboard,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function Dashboard() {
+  const portfolio = MARKETS.reduce((a, m) => a + m.current, 0);
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div className="min-h-screen">
+      <Header portfolio={portfolio} />
+      <MilestoneBar value={portfolio} />
+
+      <main className="mx-auto max-w-[1600px] px-6 py-6 space-y-6">
+        <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {MARKETS.map((m) => <MarketCard key={m.id} m={m} />)}
+        </section>
+
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2"><ActivityLog /></div>
+          <PortfolioSummary />
+        </section>
+
+        <TradesTable />
+
+        <footer className="text-center text-[10px] tracking-[0.3em] text-muted-foreground pt-4 pb-8">
+          APEX v0.1.0 · PAPER MODE · ALL SYSTEMS NOMINAL
+        </footer>
+      </main>
     </div>
   );
 }
