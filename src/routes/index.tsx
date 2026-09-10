@@ -15,6 +15,8 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "APEX autonomous multi-agent trading system dashboard — 850 SEK seed capital mission to 1M SEK." },
       { property: "og:title", content: "APEX — Autonomous Trading System" },
       { property: "og:description", content: "Multi-agent trading dashboard. Paper-mode active." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Dashboard,
