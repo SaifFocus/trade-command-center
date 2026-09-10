@@ -17,7 +17,7 @@ export function ActivityLog({ logs }: { logs: LogEntry[] }) {
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-terminal/80">
         <div className="flex items-center gap-2">
           <Terminal className="h-4 w-4 text-neon" />
-          <h3 className="text-xs tracking-[0.3em] text-neon">AGENT ACTIVITY LOG</h3>
+          <h2 className="text-xs tracking-[0.3em] text-neon">AGENT ACTIVITY LOG</h2>
         </div>
         <div className="flex gap-1.5">
           <span className="h-2 w-2 rounded-full bg-destructive/70" />

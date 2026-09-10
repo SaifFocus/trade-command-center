@@ -22,7 +22,7 @@ export function PortfolioSummary({ markets }: { markets: Market[] }) {
   return (
     <section className="panel rounded-lg p-4 h-[420px] flex flex-col">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-xs tracking-[0.3em] text-neon">PORTFOLIO SUMMARY</h3>
+        <h2 className="text-xs tracking-[0.3em] text-neon">PORTFOLIO SUMMARY</h2>
         <span className="text-[10px] tracking-widest px-2 py-1 rounded-sm border border-gold/40 text-gold bg-gold/5">
           PAPER TRADING
         </span>
