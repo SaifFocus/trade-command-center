@@ -77,14 +77,22 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "APEX — Autonomous Trading System" },
+      {
+        name: "description",
+        content:
+          "APEX is an autonomous multi-agent trading system dashboard tracking live markets, agent activity and portfolio growth in SEK.",
+      },
+      { name: "author", content: "APEX Trading System" },
+      { property: "og:title", content: "APEX — Autonomous Trading System" },
+      {
+        property: "og:description",
+        content:
+          "Live multi-agent trading dashboard: market agents, activity log, portfolio allocation and paper trades.",
+      },
       { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "APEX Trading System" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
@@ -97,7 +105,32 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: "/favicon.png",
       },
     ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "APEX",
+          alternateName: "APEX Trading System",
+          url: "https://apextradyr.lovable.app",
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "APEX",
+          brand: { "@type": "Brand", name: "APEX Trading System" },
+          url: "https://apextradyr.lovable.app",
+          description:
+            "Autonomous multi-agent trading system growing a 850 SEK seed toward a 1M SEK milestone.",
+        }),
+      },
+    ],
   }),
+
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,

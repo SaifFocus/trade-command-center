@@ -1,0 +1,7 @@
+# APEX Trading System
+
+> Autonomous multi-agent trading system dashboard tracking market agents, activity logs and portfolio growth in SEK.
+
+## Pages
+
+- [Dashboard](/): Live market cards, agent activity log, portfolio allocation and paper trades.
