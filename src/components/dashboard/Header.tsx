@@ -17,8 +17,10 @@ export function Header({ portfolio }: { portfolio: number }) {
       <div className="relative mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-4 px-6 py-4">
         <div className="flex items-center gap-4">
           <div className="flex flex-col">
-            <h1 className="text-neon font-display text-3xl font-black tracking-[0.2em] leading-none flicker">APEX</h1>
-            <span className="text-[10px] tracking-[0.4em] text-muted-foreground mt-1">AUTONOMOUS TRADING SYSTEM</span>
+            <h1 className="text-neon font-display text-3xl font-black tracking-[0.2em] leading-none flicker">
+              APEX <span className="sr-only">Autonomous Trading System</span>
+            </h1>
+            <span aria-hidden="true" className="text-[10px] tracking-[0.4em] text-muted-foreground mt-1">AUTONOMOUS TRADING SYSTEM</span>
           </div>
           <div className="hidden md:flex items-center gap-2 ml-6 px-3 py-1.5 rounded border border-border bg-terminal">
             <span className="relative flex h-2.5 w-2.5">

@@ -5,7 +5,7 @@ export function TradesTable({ trades }: { trades: TradeRow[] }) {
   return (
     <section className="panel rounded-lg overflow-hidden">
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-terminal/60">
-        <h3 className="text-xs tracking-[0.3em] text-neon">RECENT TRADES</h3>
+        <h2 className="text-xs tracking-[0.3em] text-neon">RECENT TRADES</h2>
         <span className="text-[10px] tracking-widest text-muted-foreground">
           {empty ? "No trades yet — system in paper trading mode" : `${trades.length} TRADES`}
         </span>

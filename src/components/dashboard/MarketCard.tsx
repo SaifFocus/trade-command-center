@@ -23,7 +23,7 @@ export function MarketCard({ m }: { m: Market }) {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xl">{m.emoji}</span>
-            <h3 className="text-sm font-bold tracking-widest" style={{ color: m.color }}>{m.name}</h3>
+            <h2 className="text-sm font-bold tracking-widest" style={{ color: m.color }}>{m.name}</h2>
           </div>
           <div className="mt-1 text-[10px] tracking-widest text-muted-foreground">SEED · {m.seed} SEK</div>
         </div>

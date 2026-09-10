@@ -16,8 +16,10 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "APEX — Autonomous Trading System" },
       { property: "og:description", content: "Multi-agent trading dashboard. Paper-mode active." },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://apextradyr.lovable.app/" },
       { name: "twitter:card", content: "summary" },
     ],
+    links: [{ rel: "canonical", href: "https://apextradyr.lovable.app/" }],
   }),
   component: Dashboard,
 });
