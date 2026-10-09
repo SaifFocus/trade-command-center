@@ -12,8 +12,11 @@ type DB = SupabaseClient<Database>;
 type CfgRow = Database["public"]["Tables"]["desk_config"]["Row"];
 const H4 = 4 * 3600_000;
 
+// agent_logs.level allows only INFO, SIGNAL, WARNING, ERROR.
+const LEVELS: Record<string, string> = { INFO: "INFO", SUCCESS: "INFO", TRADE: "SIGNAL", SIGNAL: "SIGNAL", WARN: "WARNING", ERROR: "ERROR" };
 async function log(db: DB, message: string, level = "INFO", metadata?: unknown) {
-  await db.from("agent_logs").insert({ agent_name: "PAPER DESK", message, level, market_id: "swing", metadata: (metadata ?? null) as any });
+  const { error } = await db.from("agent_logs").insert({ agent_name: "PAPER DESK", message, level: LEVELS[level] ?? "INFO", market_id: "swing", metadata: (metadata ?? null) as any });
+  if (error) console.error("[desk] log insert failed", error.message);
 }
 
 async function getCfg(db: DB): Promise<CfgRow> {

@@ -30,6 +30,6 @@ export const setKillSwitchFn = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.from("desk_config").update({ kill_switch: data.on, updated_at: new Date().toISOString() }).eq("id", 1);
     if (error) throw new Error(error.message);
-    await supabaseAdmin.from("agent_logs").insert({ agent_name: "PAPER DESK", message: `Kill switch turned ${data.on ? "ON" : "OFF"} by owner`, level: "WARN", market_id: "swing" });
+    await supabaseAdmin.from("agent_logs").insert({ agent_name: "PAPER DESK", message: `Kill switch turned ${data.on ? "ON" : "OFF"} by owner`, level: "WARNING", market_id: "swing" });
     return { ok: true };
   });
