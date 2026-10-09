@@ -41,6 +41,7 @@ export function Header({ portfolio }: { portfolio: number }) {
           </div>
           <Link to="/desk" className="rounded border border-border bg-terminal px-3 py-1.5 text-xs tracking-widest text-neon hover:opacity-80">DESK</Link>
           <Link to="/backtest" className="rounded border border-border bg-terminal px-3 py-1.5 text-xs tracking-widest text-neon hover:opacity-80">BACKTEST</Link>
+          <Link to="/scout" className="rounded border border-border bg-terminal px-3 py-1.5 text-xs tracking-widest text-neon hover:opacity-80">SCOUT</Link>
           <button onClick={signOut} className="rounded border border-border bg-terminal px-3 py-1.5 text-xs tracking-widest text-muted-foreground hover:text-neon">SIGN OUT</button>
           <div className="flex items-center gap-2 rounded border border-border bg-terminal px-3 py-1.5">
             <Activity className="h-4 w-4 text-neon" />

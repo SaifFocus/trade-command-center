@@ -64,6 +64,13 @@
       "when": 1791580026351,
       "tag": "0008_sm_queue_priority",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791580484970,
+      "tag": "0009_sm_copy_coins",
+      "breakpoints": true
     }
   ]
 }
