@@ -7,3 +7,8 @@
 - All pages live under `src/routes/_authenticated/` (signed-in gate + owner gate); only `/login` is outside. Why: no public surface.
 - The cron route requires `x-cron-secret`, verified via service-role-only `verify_cron_secret()` against `public.app_private`; pg_cron reads the same row. Why: token never leaves the server/DB.
 - A trigger on `auth.users` rejects sign-ups once an owner exists. Why: auth-level sign-up block.
+- Paper desk: `src/lib/hl/desk.server.ts` runs cycle (sync, FX, manage, signals) and execute (expire, shadow, risk, fill); cron routes `/api/cron/desk-cycle` and `/api/cron/desk-execute` replace the old hl-sync job. Why: the review window has to sit between signal creation and execution.
+- Trade management (`stepPosition`) and signals (`signalsAt`, `regimeAt`) live only in `engine.ts` and are shared by backtest and paper desk. Why: paper results have to match the backtest.
+- Risk rules are pure functions in `src/lib/hl/risk.ts` with tests in `risk.test.ts`. Why: easy to check and change.
+- `submit_review()` can only be executed by service_role/postgres. Why: only the owner's external agent may review, via SQL.
+- agent_logs.level only allows INFO/SIGNAL/WARNING/ERROR; desk logs are mapped to those. Why: there's a check constraint on the existing table.
