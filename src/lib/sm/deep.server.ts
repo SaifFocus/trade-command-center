@@ -136,17 +136,35 @@ export async function processQueue(db: DB, budgetMs = 230_000) {
   return { processed: done, failed, queue, graded, watchlist: wl };
 }
 
-/** Top 30 tier A/B by score; Invo wallets with originator share < 50% rank after the rest. */
+export const PRACTICE_SLOTS = 20;
+const practiceOk = (f: unknown) => {
+  const x = (f ?? {}) as Record<string, boolean>;
+  return !!(x.swing_hold && x.recent && x.leverage_liq && x.liquid);
+};
+
+/**
+ * Top 30 tier A/B by score; Invo wallets with originator share < 50% rank after the rest.
+ * Practice (paper only): up to 20 more swing traders that pass the style and safety filters (hold ≥ 24 h, traded in the last
+ * 14 days, leverage ≤ 10 without liquidations, liquid coins) but not yet the trade-count/accuracy bar. Their opens become
+ * 'practice_follow' signals, which never trade real money.
+ */
 export async function rebuildWatchlist(db: DB) {
-  const { data: sc } = await db.from("sm_scores").select("address,score,tier").not("tier", "is", null).order("score", { ascending: false }).limit(500);
-  const addrs = (sc ?? []).map((r) => r.address);
+  const [{ data: sc }, { data: pc }] = await Promise.all([
+    db.from("sm_scores").select("address,score,tier").not("tier", "is", null).order("score", { ascending: false }).limit(500),
+    db.from("sm_scores").select("address,score,filters").is("tier", null).eq("fast", false).order("score", { ascending: false }).limit(1000),
+  ]);
+  const practicePool = (pc ?? []).filter((r) => practiceOk(r.filters));
+  const addrs = [...(sc ?? []), ...practicePool].map((r) => r.address);
   const { data: ws } = addrs.length ? await db.from("sm_wallets").select("address,sources,invo_originator_share").in("address", addrs) : { data: [] };
   const wm = new Map((ws ?? []).map((w) => [w.address, w]));
   const penal = (a: string) => { const w = wm.get(a); return w?.sources.includes("invo") && !w.sources.includes("leaderboard") && (w.invo_originator_share ?? 0) < 0.5 ? 1 : 0; };
   const ranked = [...(sc ?? [])].sort((a, b) => penal(a.address) - penal(b.address) || +b.score - +a.score);
   const top = new Set(ranked.slice(0, 30).map((r) => r.address));
-  await db.from("sm_scores").update({ watchlist: false }).eq("watchlist", true);
+  const practice = practicePool.filter((r) => !top.has(r.address))
+    .sort((a, b) => penal(a.address) - penal(b.address) || +b.score - +a.score).slice(0, PRACTICE_SLOTS).map((r) => r.address);
+  await db.from("sm_scores").update({ watchlist: false, practice: false }).or("watchlist.eq.true,practice.eq.true");
   if (top.size) await db.from("sm_scores").update({ watchlist: true }).in("address", Array.from(top));
+  if (practice.length) await db.from("sm_scores").update({ watchlist: true, practice: true }).in("address", practice);
   return top.size;
 }
 

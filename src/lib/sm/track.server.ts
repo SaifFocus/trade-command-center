@@ -72,12 +72,13 @@ export async function trackWatchlist(db: DB) {
 
 async function followSignals(db: DB) {
   const { data: cfg } = await db.from("desk_config").select("enabled_setups,kill_switch").eq("id", 1).single();
-  if (!cfg?.enabled_setups.includes("smart_money_follow")) return [];
+  const realOn = !!cfg?.enabled_setups.includes("smart_money_follow"), practiceOn = !!cfg?.enabled_setups.includes("practice_follow");
+  if (!realOn && !practiceOn) return [];
   const { data: evs } = await db.from("sm_events").select("*").eq("processed", false).eq("kind", "open").order("t");
   if (!evs?.length) return [];
   await db.from("sm_events").update({ processed: true }).in("id", evs.map((e) => e.id));
   const liquid = await liquidCoins(db);
-  const { data: scores } = await db.from("sm_scores").select("address,tier,score,watchlist").eq("watchlist", true);
+  const { data: scores } = await db.from("sm_scores").select("address,tier,score,watchlist,practice").eq("watchlist", true);
   const sm = new Map((scores ?? []).map((s) => [s.address, s]));
   const created: string[] = [];
   const mids = await hlInfo<Record<string, string>>({ type: "allMids" });
@@ -87,9 +88,14 @@ async function followSignals(db: DB) {
     if ((e.notional_frac ?? 0) < 0.02) continue;
     const src = sm.get(e.address);
     const { data: holders } = await db.from("sm_positions").select("*").eq("coin", e.coin).eq("side", e.side);
-    const near = (holders ?? []).filter((h) => sm.has(h.address) && Math.abs(Date.parse(h.opened_at) - Date.parse(e.t)) <= 12 * 3600_000);
-    const tierA = src?.tier === "A";
-    if (!tierA && near.length < 2) continue;
+    // Consensus counts only full-bar wallets; practice wallets never make a real follow signal.
+    const near = (holders ?? []).filter((h) => sm.has(h.address) && !sm.get(h.address)!.practice && Math.abs(Date.parse(h.opened_at) - Date.parse(e.t)) <= 12 * 3600_000);
+    const tierA = src?.tier === "A" && !src.practice;
+    const real = realOn && !!src && !src.practice && (tierA || near.length >= 2);
+    const practice = !real && practiceOn && !!src; // any other watchlist open: paper-only practice follow
+    if (!real && !practice) continue;
+    const setup = real ? "smart_money_follow" : "practice_follow";
+    const trigger = real ? (tierA ? "tier_a_open" : "consensus") : "practice_open";
     const [{ data: openSig }, { data: openPos }] = await Promise.all([
       db.from("signals").select("id").eq("coin", e.coin).in("status", ["new", "approved"]).limit(1),
       db.from("paper_positions").select("id").eq("coin", e.coin).eq("status", "open").eq("shadow", false).limit(1),
@@ -99,7 +105,7 @@ async function followSignals(db: DB) {
     const dAtr = await dailyAtr(e.coin);
     if (!(mark > 0) || !dAtr) continue;
     const R = 1.5 * dAtr, dir = e.side === "long" ? 1 : -1;
-    const walletAddrs = Array.from(new Set([e.address, ...near.map((h) => h.address)]));
+    const walletAddrs = real ? Array.from(new Set([e.address, ...near.map((h) => h.address)])) : [e.address];
     const [{ data: wss }, { data: wws }, { data: u }] = await Promise.all([
       db.from("sm_wallet_stats").select("address,win_rate,profit_factor,median_hold_h").in("address", walletAddrs),
       db.from("sm_wallets").select("address,sources").in("address", walletAddrs),
@@ -107,17 +113,17 @@ async function followSignals(db: DB) {
     ]);
     const wallets = walletAddrs.map((a) => {
       const st = wss?.find((x) => x.address === a), wv = wws?.find((x) => x.address === a), sc = sm.get(a), h = holders?.find((x) => x.address === a);
-      return { address: a, source: wv?.sources ?? [], tier: sc?.tier, score: sc?.score, win_rate: st?.win_rate, profit_factor: st?.profit_factor,
+      return { address: a, source: wv?.sources ?? [], tier: sc?.practice ? "practice" : sc?.tier, score: sc?.score, win_rate: st?.win_rate, profit_factor: st?.profit_factor,
         median_hold_h: st?.median_hold_h, entry_px: h?.entry_px ?? e.entry_px };
     });
     const { error } = await db.from("signals").insert({
-      coin: e.coin, setup: "smart_money_follow", side: e.side, signal_bar_t: e.t, ref_px: mark, stop_px: mark - dir * R,
-      t1_px: mark + dir * 1.5 * R, t2_px: mark + dir * 3 * R, stop_dist_pct: R / mark, regime: tierA ? "tier_a_open" : "consensus",
-      context: { trigger: tierA ? "tier_a_open" : "consensus", wallets, funding: u?.[0]?.funding ?? null, open_interest: u?.[0]?.open_interest ?? null, daily_atr: dAtr } as any,
+      coin: e.coin, setup, side: e.side, signal_bar_t: e.t, ref_px: mark, stop_px: mark - dir * R,
+      t1_px: mark + dir * 1.5 * R, t2_px: mark + dir * 3 * R, stop_dist_pct: R / mark, regime: trigger,
+      context: { trigger, practice: !real, wallets, funding: u?.[0]?.funding ?? null, open_interest: u?.[0]?.open_interest ?? null, daily_atr: dAtr } as any,
     });
     if (error) { await smLog(db, `follow signal insert failed: ${error.message}`, "ERROR"); continue; }
     created.push(`${e.coin} ${e.side}`);
-    await smLog(db, `NEW SIGNAL ${e.coin} ${e.side.toUpperCase()} smart_money_follow (${tierA ? "tier A open" : `${near.length} wallets`}) @ ${mark} — awaiting review`, "SIGNAL");
+    await smLog(db, `NEW SIGNAL ${e.coin} ${e.side.toUpperCase()} ${setup} (${real ? (tierA ? "tier A open" : `${near.length} wallets`) : "practice: one watched wallet below the full bar"}) @ ${mark} — awaiting review`, "SIGNAL");
     void key;
   }
   return created;
@@ -125,7 +131,7 @@ async function followSignals(db: DB) {
 
 /** Close paper follow positions once every source wallet has closed its position (paper fill at mark). */
 async function followExits(db: DB) {
-  const { data: open } = await db.from("paper_positions").select("*").eq("status", "open").eq("setup", "smart_money_follow");
+  const { data: open } = await db.from("paper_positions").select("*").eq("status", "open").in("setup", ["smart_money_follow", "practice_follow"]);
   if (!open?.length) return [];
   const mids = await hlInfo<Record<string, string>>({ type: "allMids" });
   const { data: cfg } = await db.from("desk_config").select("fee_pct,slip_pct").eq("id", 1).single();
@@ -146,7 +152,7 @@ async function followExits(db: DB) {
     await db.from("paper_positions").update({ status: "closed", exit_t: new Date().toISOString(), exit_px: px, exit_reason: "follow_exit",
       gross_usd: gross, fees_usd: fees, net_usd: net, net_r: k ? net / k : null, remaining_frac: 0 }).eq("id", p.id);
     closed.push(p.coin);
-    await smLog(db, `${p.shadow ? "[SHADOW] " : ""}${p.coin} ${p.side.toUpperCase()} smart_money_follow closed (source wallets exited) @ ${px} · $${net.toFixed(2)}`, net >= 0 ? "INFO" : "WARNING");
+    await smLog(db, `${p.shadow ? "[SHADOW] " : ""}${p.coin} ${p.side.toUpperCase()} ${p.setup} closed (source wallets exited) @ ${px} · $${net.toFixed(2)}`, net >= 0 ? "INFO" : "WARNING");
   }
   return closed;
 }

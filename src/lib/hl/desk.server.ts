@@ -303,7 +303,7 @@ async function insertPosition(
     signal_id: s.id, shadow, shadow_reason: shadow ? shadowReason : null, coin: s.coin, side: s.side, setup: s.setup, entry_t: now.toISOString(), entry_px: z.entry,
     init_stop_px: +s.stop_px, stop_px: +s.stop_px, t1_px: z.t1, t2_px: z.t2, size_coin: z.size_coin, notional_usd: z.notional_usd,
     margin_usd: z.margin_usd, leverage: z.leverage, risk_usd: z.risk_usd, fees_usd: (z.notional_usd * cfg.fee_pct) / 100,
-    follow_wallets: s.setup === "smart_money_follow" ? ((s.context?.wallets ?? []) as { address: string }[]).map((w) => w.address) : null,
+    follow_wallets: s.setup === "smart_money_follow" || s.setup === "practice_follow" ? ((s.context?.wallets ?? []) as { address: string }[]).map((w) => w.address) : null,
   }).select("id").single();
   if (error || !data) throw new Error(`paper_positions insert: ${error?.message ?? "no row returned"}`);
   return data.id;

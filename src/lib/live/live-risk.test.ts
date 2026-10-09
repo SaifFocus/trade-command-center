@@ -69,6 +69,8 @@ describe("liveEntryBlock", () => {
     expect(liveEntryBlock({ ...base, cfg: { ...cfg, kill_switch: true } })).toMatch(/kill/);
   });
   it("keeps paper-only setups off real money", () => expect(liveEntryBlock({ ...base, setup: "smart_money_follow" })).toMatch(/paper-only/));
+  it("never trades practice follows, even if listed", () =>
+    expect(liveEntryBlock({ ...base, setup: "practice_follow", cfg: { ...cfg, live_setups: [...cfg.live_setups, "practice_follow"] } })).toMatch(/paper only/));
   it("blocks at night in Stockholm", () => expect(liveEntryBlock({ ...base, now: new Date("2026-10-09T02:00:00Z") })).toMatch(/night/));
   it("blocks illiquid coins not on the list", () => {
     expect(liveEntryBlock({ ...base, coin: "XYZ", day_volume_usd: 2_000_000 })).toMatch(/not on the live list/);

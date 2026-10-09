@@ -83,6 +83,7 @@ export function liveEntryBlock(x: EntryCheckInput): string | null {
   if (cfg.kill_switch) return "kill switch is on";
   if (!cfg.live_armed) return "live mode is not armed";
   if (!(cfg.usd_sek > 0)) return "no USD/SEK rate";
+  if (x.setup === "practice_follow") return "practice follows are paper only";
   if (!cfg.live_setups.includes(x.setup)) return `setup ${x.setup} is paper-only (not in live_setups)`;
   if (cfg.night_rule && stockholmHour(x.now) < 7) return "night rule: no new entries 00:00-07:00 Stockholm";
   const listed = cfg.live_whitelist.includes(x.coin);

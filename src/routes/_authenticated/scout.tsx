@@ -13,7 +13,7 @@ export const Route = createFileRoute("/_authenticated/scout")({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>;
 type Wallet = {
-  address: string; tier: string | null; score: number; eligible: boolean; fast: boolean; watchlist: boolean;
+  address: string; tier: string | null; score: number; eligible: boolean; fast: boolean; watchlist: boolean; practice: boolean;
   sources: string[]; display_name: string | null; originator: number | null;
   win_rate: number | null; profit_factor: number | null; ret_90: number | null; mdd_90: number | null; median_hold_h: number | null;
   avg_lev: number | null; trades: number | null; last_trade_at: string | null;
@@ -53,7 +53,7 @@ function ScoutPage() {
   const [events, setEvents] = useState<Row[]>([]);
   const [copyRun, setCopyRun] = useState<Row | null>(null);
   const [counts, setCounts] = useState<{ candidates: number; invo: number; lb: number }>({ candidates: 0, invo: 0, lb: 0 });
-  const [tier, setTier] = useState<"all" | "A" | "B" | "AB">("AB");
+  const [tier, setTier] = useState<"all" | "A" | "B" | "AB" | "P">("AB");
   const [source, setSource] = useState<"all" | "invo" | "leaderboard">("all");
   const [swingOnly, setSwingOnly] = useState(true);
   const [open, setOpen] = useState<string | null>(null);
@@ -64,7 +64,7 @@ function ScoutPage() {
 
   const load = async () => {
     const [sc, jb, ev, runs, cand, invo, lb] = await Promise.all([
-      supabase.from("sm_scores").select("address,tier,score,eligible,fast,watchlist").order("score", { ascending: false }).limit(2000),
+      supabase.from("sm_scores").select("address,tier,score,eligible,fast,watchlist,practice").order("score", { ascending: false }).limit(2000),
       supabase.from("sm_jobs").select("*"),
       supabase.from("sm_events").select("*").order("t", { ascending: false }).limit(30),
       supabase.from("backtest_runs").select("*").eq("params->>kind", "copy").order("created_at", { ascending: false }).limit(1),
@@ -87,7 +87,7 @@ function ScoutPage() {
     setWallets(scores.map((s) => {
       const st = stats.get(s.address) ?? {}, m = meta.get(s.address) ?? {};
       return {
-        address: s.address, tier: s.tier, score: +s.score, eligible: s.eligible, fast: s.fast, watchlist: s.watchlist,
+        address: s.address, tier: s.tier, score: +s.score, eligible: s.eligible, fast: s.fast, watchlist: s.watchlist, practice: !!s.practice,
         sources: m.sources ?? [], display_name: m.display_name ?? null, originator: m.invo_originator_share == null ? null : +m.invo_originator_share,
         win_rate: st.win_rate ?? null, profit_factor: st.profit_factor ?? null, ret_90: st.ret_90 ?? null, mdd_90: st.mdd_90 ?? null,
         median_hold_h: st.median_hold_h ?? null, avg_lev: st.avg_lev ?? null, trades: st.trades ?? null, last_trade_at: st.last_trade_at ?? null,
@@ -123,6 +123,7 @@ function ScoutPage() {
     if (tier === "A" && w.tier !== "A") return false;
     if (tier === "B" && w.tier !== "B") return false;
     if (tier === "AB" && w.tier !== "A" && w.tier !== "B") return false;
+    if (tier === "P" && !w.practice) return false;
     if (source !== "all" && !w.sources.includes(source)) return false;
     if (swingOnly && (w.fast || (w.median_hold_h ?? 0) < 24)) return false;
     return true;
@@ -150,7 +151,7 @@ function ScoutPage() {
           <Panel title="PIPELINE">
             <table className="w-full text-xs"><tbody>
               <tr className="border-t border-border/50"><td className="py-1 text-muted-foreground">Candidates</td><td className="tabular-nums">{counts.candidates} · {counts.lb} leaderboard · {counts.invo} Invo</td></tr>
-              <tr className="border-t border-border/50"><td className="py-1 text-muted-foreground">Graded</td><td className="tabular-nums">{wallets.length} · tier A {tierCount("A")} · tier B {tierCount("B")} · watchlist {wallets.filter((w) => w.watchlist).length}</td></tr>
+              <tr className="border-t border-border/50"><td className="py-1 text-muted-foreground">Graded</td><td className="tabular-nums">{wallets.length} · tier A {tierCount("A")} · tier B {tierCount("B")} · watchlist {wallets.filter((w) => w.watchlist && !w.practice).length} · practice {wallets.filter((w) => w.practice).length} (paper only)</td></tr>
               <tr className="border-t border-border/50"><td className="py-1 text-muted-foreground">Grading queue</td><td className="tabular-nums">{dd.queue ?? "—"} left · {dd.per_min ?? "—"}/min · last {time(dd.last_run)}</td></tr>
               <tr className="border-t border-border/50"><td className="py-1 text-muted-foreground">Leaderboard pull</td><td>{time(lbj.at)} · {lbj.passing_floor ?? "—"} pass floor</td></tr>
               <tr className="border-t border-border/50"><td className="py-1 text-muted-foreground">Invo files</td><td>{inv.remaining_days != null ? `${inv.remaining_days} days left` : "—"} · {inv.candidates ?? "—"} wallets</td></tr>
@@ -198,7 +199,7 @@ function ScoutPage() {
         <Panel title={`GRADED TRADERS (${shown.length})`} right={
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <select className={sel} value={tier} onChange={(e) => setTier(e.target.value as typeof tier)}>
-              <option value="AB">Tier A + B</option><option value="A">Tier A</option><option value="B">Tier B</option><option value="all">All graded</option>
+              <option value="AB">Tier A + B</option><option value="A">Tier A</option><option value="B">Tier B</option><option value="P">Practice follows</option><option value="all">All graded</option>
             </select>
             <select className={sel} value={source} onChange={(e) => setSource(e.target.value as typeof source)}>
               <option value="all">All sources</option><option value="invo">Invo</option><option value="leaderboard">Leaderboard</option>
@@ -210,7 +211,7 @@ function ScoutPage() {
               <thead className="text-muted-foreground"><tr className="text-left"><th></th><th>WALLET</th><th>SRC</th><th>TIER</th><th>SCORE</th><th>WIN</th><th>PF</th><th>90D RET</th><th>90D DD</th><th>MED HOLD</th><th>LEV</th><th>TRADES</th><th>LAST</th><th>ORIG</th></tr></thead>
               <tbody>{shown.slice(0, 300).map((w) => (
                 <tr key={w.address} onClick={() => setOpen(open === w.address ? null : w.address)} className={`cursor-pointer border-t border-border/50 hover:bg-terminal ${open === w.address ? "bg-terminal" : ""}`}>
-                  <td>{w.watchlist ? "★" : ""}</td>
+                  <td title={w.practice ? "Practice follow: below the full bar, paper only" : undefined}>{w.practice ? "☆" : w.watchlist ? "★" : ""}</td>
                   <td className="font-mono">
                     {short(w.address)}{w.display_name ? <span className="text-muted-foreground"> {w.display_name}</span> : null}{" "}
                     <button onClick={async (e) => { e.stopPropagation(); try { await navigator.clipboard.writeText(w.address); setCopied(w.address); } catch { /* clipboard blocked */ } }} className="text-[10px] text-muted-foreground hover:text-neon">{copied === w.address ? "copied" : "copy"}</button>
