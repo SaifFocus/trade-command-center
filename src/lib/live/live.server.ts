@@ -66,7 +66,9 @@ export function toLiveCfg(r: Row): LiveCfg {
     budget_sek: +r.budget_sek, usd_sek: +(r.usd_sek ?? 0), risk_pct: +r.risk_pct, max_risk_pct: +r.max_risk_pct, max_open: +r.max_open,
     min_order_usd: +r.min_order_usd, fee_pct: +r.fee_pct, slip_pct: +r.slip_pct, daily_loss_pct: +r.daily_loss_pct,
     weekly_loss_pct: +r.weekly_loss_pct, kill_drawdown_pct: +r.kill_drawdown_pct, night_rule: !!r.night_rule, kill_switch: !!r.kill_switch,
-    live_armed: !!r.live_armed, live_whitelist: (r.live_whitelist ?? []) as string[], live_min_volume_usd: +(r.live_min_volume_usd ?? 1e7),
+    live_armed: !!r.live_armed, live_whitelist: (r.live_whitelist ?? []) as string[],
+    live_setups: (r.live_setups ?? ["pullback_long", "breakout_retest_long", "breakdown_retest_short", "crowded_long_squeeze_short"]) as string[],
+    live_min_volume_usd: +(r.live_min_volume_usd ?? 1e7),
     max_entries_per_day: +(r.max_entries_per_day ?? 6),
   };
 }
@@ -173,7 +175,7 @@ export async function executeLive(db: DB, signal: Row, opts: { ex?: LiveExchange
     const sumSince = (ms: number) => closed.filter((p) => Date.parse(p.exit_t) >= Date.now() - ms).reduce((a, p) => a + +(p.net_usd ?? 0), 0);
     const equity = liveEquityUsd(cfg, st.accountValue);
     const block = liveEntryBlock({
-      cfg, now, coin: signal.coin, side, mark, ref_px: +signal.ref_px, stop_px: +signal.stop_px, day_volume_usd: m?.dayNtlVlm ?? null,
+      cfg, now, coin: signal.coin, side, setup: signal.setup, mark, ref_px: +signal.ref_px, stop_px: +signal.stop_px, day_volume_usd: m?.dayNtlVlm ?? null,
       open_live: act.length,
       entries_today: (recent ?? []).filter((p) => ["opening", "open", "closing", "closed"].includes(p.status) && stockholmDay(new Date(p.entry_t)) === today).length,
       day_pnl_usd: sumSince(86400_000), week_pnl_usd: sumSince(7 * 86400_000), equity_usd: equity,
@@ -283,7 +285,8 @@ async function syncFills(db: DB, ex: LiveExchange, r: Row) {
   });
   const { error } = await db.from("live_fills").upsert(rows, { onConflict: "tid", ignoreDuplicates: true });
   if (error) throw new Error(`live_fills upsert: ${error.message}`);
-  await db.from("desk_config").update({ live_fills_cursor_ms: Math.max(...fills.map((f) => f.time)) + 1 }).eq("id", 1);
+  // Re-read a 5-second overlap next time (duplicates are ignored by tid), so fills sharing a millisecond are never skipped.
+  await db.from("desk_config").update({ live_fills_cursor_ms: Math.max(...fills.map((f) => f.time)) - 5000 }).eq("id", 1);
   return fills.length;
 }
 

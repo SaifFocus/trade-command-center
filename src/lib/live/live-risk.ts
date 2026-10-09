@@ -20,6 +20,7 @@ export type LiveCfg = {
   kill_switch: boolean;
   live_armed: boolean;
   live_whitelist: string[];
+  live_setups: string[]; // setups allowed to trade real money (smart_money_follow stays paper until its backtest gate passes)
   live_min_volume_usd: number;
   max_entries_per_day: number;
 };
@@ -64,6 +65,7 @@ export type EntryCheckInput = {
   now: Date;
   coin: string;
   side: Side;
+  setup: string;
   mark: number;
   ref_px: number;
   stop_px: number;
@@ -81,6 +83,7 @@ export function liveEntryBlock(x: EntryCheckInput): string | null {
   if (cfg.kill_switch) return "kill switch is on";
   if (!cfg.live_armed) return "live mode is not armed";
   if (!(cfg.usd_sek > 0)) return "no USD/SEK rate";
+  if (!cfg.live_setups.includes(x.setup)) return `setup ${x.setup} is paper-only (not in live_setups)`;
   if (cfg.night_rule && stockholmHour(x.now) < 7) return "night rule: no new entries 00:00-07:00 Stockholm";
   const listed = cfg.live_whitelist.includes(x.coin);
   if (!listed && !((x.day_volume_usd ?? 0) >= cfg.live_min_volume_usd))

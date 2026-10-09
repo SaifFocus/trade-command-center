@@ -142,8 +142,11 @@ export async function ingestInvoDay(db: DB, day: string) {
   return { day, rows: n, status: "ok" as const };
 }
 
-/** Ingest missing days among the last 60 (oldest first) within a time budget, then refresh Invo candidates. */
-export async function ingestInvo(db: DB, budgetMs = 200_000) {
+/**
+ * Ingest missing days among the last 60 (oldest first) within a time and day budget, then refresh Invo candidates.
+ * Small batches: decoding a day is CPU-heavy, and a request that runs too long is cut off by the host (502).
+ */
+export async function ingestInvo(db: DB, budgetMs = 45_000, maxDays = 3) {
   const t0 = Date.now();
   const today = new Date(); today.setUTCHours(0, 0, 0, 0);
   const days: string[] = [];
@@ -153,7 +156,7 @@ export async function ingestInvo(db: DB, budgetMs = 200_000) {
   const ingested: string[] = [];
   for (const d of days) {
     if (have.has(d)) continue;
-    if (Date.now() - t0 > budgetMs) break;
+    if (Date.now() - t0 > budgetMs || ingested.length >= maxDays) break;
     const r = await ingestInvoDay(db, d);
     ingested.push(`${d}:${r.rows}`);
   }

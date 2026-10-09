@@ -7,7 +7,7 @@ import {
 const cfg: LiveCfg = {
   budget_sek: 600, usd_sek: 10, risk_pct: 1.5, max_risk_pct: 2, max_open: 2, min_order_usd: 10, fee_pct: 0.045, slip_pct: 0.05,
   daily_loss_pct: 3, weekly_loss_pct: 6, kill_drawdown_pct: 15, night_rule: true, kill_switch: false, live_armed: true,
-  live_whitelist: ["BTC", "ETH", "SOL"], live_min_volume_usd: 10_000_000, max_entries_per_day: 6,
+  live_whitelist: ["BTC", "ETH", "SOL"], live_setups: ["pullback_long", "breakout_retest_long", "breakdown_retest_short", "crowded_long_squeeze_short"], live_min_volume_usd: 10_000_000, max_entries_per_day: 6,
 };
 const BTC: AssetInfo = { coin: "BTC", asset: 0, szDecimals: 5, maxLeverage: 40 };
 const SOL: AssetInfo = { coin: "SOL", asset: 5, szDecimals: 2, maxLeverage: 20 };
@@ -62,12 +62,13 @@ describe("sizeLive", () => {
 });
 
 describe("liveEntryBlock", () => {
-  const base = { cfg, now: noon, coin: "SOL", side: "long" as const, mark: 150, ref_px: 150, stop_px: 141, day_volume_usd: null, open_live: 0, entries_today: 0, day_pnl_usd: 0, week_pnl_usd: 0, equity_usd: 60 };
+  const base = { cfg, now: noon, coin: "SOL", side: "long" as const, setup: "pullback_long", mark: 150, ref_px: 150, stop_px: 141, day_volume_usd: null, open_live: 0, entries_today: 0, day_pnl_usd: 0, week_pnl_usd: 0, equity_usd: 60 };
   it("passes a clean entry", () => expect(liveEntryBlock(base)).toBeNull());
   it("blocks when not armed or kill switch on", () => {
     expect(liveEntryBlock({ ...base, cfg: { ...cfg, live_armed: false } })).toMatch(/not armed/);
     expect(liveEntryBlock({ ...base, cfg: { ...cfg, kill_switch: true } })).toMatch(/kill/);
   });
+  it("keeps paper-only setups off real money", () => expect(liveEntryBlock({ ...base, setup: "smart_money_follow" })).toMatch(/paper-only/));
   it("blocks at night in Stockholm", () => expect(liveEntryBlock({ ...base, now: new Date("2026-10-09T02:00:00Z") })).toMatch(/night/));
   it("blocks illiquid coins not on the list", () => {
     expect(liveEntryBlock({ ...base, coin: "XYZ", day_volume_usd: 2_000_000 })).toMatch(/not on the live list/);

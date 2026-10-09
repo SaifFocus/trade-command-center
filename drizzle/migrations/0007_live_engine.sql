@@ -6,6 +6,7 @@ ALTER TABLE public.desk_config
   ADD COLUMN IF NOT EXISTS live_armed_at timestamptz,
   ADD COLUMN IF NOT EXISTS live_start_equity_usd numeric,
   ADD COLUMN IF NOT EXISTS live_whitelist text[] NOT NULL DEFAULT ARRAY['BTC','ETH','SOL'],
+  ADD COLUMN IF NOT EXISTS live_setups text[] NOT NULL DEFAULT ARRAY['pullback_long','breakout_retest_long','breakdown_retest_short','crowded_long_squeeze_short'],
   ADD COLUMN IF NOT EXISTS live_min_volume_usd numeric NOT NULL DEFAULT 10000000,
   ADD COLUMN IF NOT EXISTS max_entries_per_day int NOT NULL DEFAULT 6,
   ADD COLUMN IF NOT EXISTS smoke_test_passed_at timestamptz,
