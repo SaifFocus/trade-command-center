@@ -86,8 +86,8 @@ function DeskPage() {
     return +p.gross_usd + dir * (m - +p.entry_px) * +p.size_coin * +p.remaining_frac - +p.fees_usd - +p.funding_usd;
   };
 
-  const cmp = (shadow: boolean) => {
-    const xs = closed.filter((p) => p.shadow === shadow);
+  const cmp = (group: "real" | "risk" | "vetoed") => {
+    const xs = closed.filter((p) => (group === "real" ? !p.shadow : p.shadow && (p.shadow_reason ?? "vetoed") === group));
     const n = xs.length;
     return { n, wr: n ? xs.filter((p) => +(p.net_r ?? 0) > 0).length / n : 0, avg: n ? xs.reduce((a, p) => a + +(p.net_r ?? 0), 0) / n : 0 };
   };
@@ -103,7 +103,7 @@ function DeskPage() {
         const v = live ? livePnl(p) : +(p.net_usd ?? 0);
         return (
           <tr key={p.id} className="border-t border-border/50">
-            <td>{p.shadow ? "◌ " : ""}{p.coin}</td><td>{p.side.toUpperCase()}</td><td>{p.setup}</td>
+            <td title={p.shadow ? (p.shadow_reason === "risk" ? "Shadow: blocked by risk rules" : "Shadow: vetoed by review") : undefined}>{p.shadow ? (p.shadow_reason === "risk" ? "◌R " : "◌V ") : ""}{p.coin}</td><td>{p.side.toUpperCase()}</td><td>{p.setup}</td>
             <td className="tabular-nums">{(+p.entry_px).toPrecision(6)}</td><td className="tabular-nums">{(+p.stop_px).toPrecision(6)}{p.t1_hit ? " (BE)" : ""}</td>
             <td className="tabular-nums">{(+p.t1_px).toPrecision(5)} / {(+p.t2_px).toPrecision(5)}</td><td className="tabular-nums">${fmt(+p.notional_usd)}</td>
             <td className={`tabular-nums ${(v ?? 0) >= 0 ? "text-neon" : "text-destructive"}`}>{fmt(v)}</td>
@@ -142,6 +142,7 @@ function DeskPage() {
                 <div className="text-muted-foreground">RISK {cfg.risk_pct}% (max {cfg.max_risk_pct}%) · MAX OPEN {cfg.max_open} · MIN ORDER ${cfg.min_order_usd} · FEE {cfg.fee_pct}% · SLIP {cfg.slip_pct}%</div>
                 <div className="text-muted-foreground">NIGHT RULE {cfg.night_rule ? "ON" : "OFF"} · REVIEW WINDOW {cfg.review_window_minutes} MIN</div>
                 <div className="text-muted-foreground">SETUPS {cfg.enabled_setups.join(", ")}</div>
+                <div className="text-muted-foreground">COINS top 20 by volume{cfg.paper_extra_coins?.length ? ` + ${cfg.paper_extra_coins.length} checked extras (${cfg.paper_extra_coins.join(", ")})` : " (extra coins: universe check pending or not passed)"}</div>
                 <button disabled={busy} onClick={() => act(cfg.kill_switch ? "KILL SWITCH OFF" : "KILL SWITCH ON", () => setKill({ data: { on: !cfg.kill_switch } }))}
                   className={`mt-2 rounded border px-3 py-1.5 text-xs tracking-widest disabled:opacity-40 ${cfg.kill_switch ? "border-destructive text-destructive" : "border-border text-muted-foreground hover:text-neon"}`}>
                   KILL SWITCH: {cfg.kill_switch ? "ON — ENTRIES BLOCKED" : "OFF"}
@@ -202,10 +203,10 @@ function DeskPage() {
         <Panel title="OPEN POSITIONS (PAPER)"><PosTable rows={[...openReal, ...openShadow]} live /></Panel>
         <Panel title="CLOSED TRADES"><PosTable rows={closed} live={false} /></Panel>
 
-        <Panel title="APPROVED vs VETOED (SHADOW)">
+        <Panel title="APPROVED vs SHADOW TRADES (◌V vetoed · ◌R blocked by risk rules)">
           <table className="w-full text-xs">
             <thead className="text-muted-foreground"><tr className="text-left"><th>GROUP</th><th>TRADES</th><th>WIN RATE</th><th>AVG NET R</th></tr></thead>
-            <tbody>{([["APPROVED (real)", cmp(false)], ["VETOED (shadow)", cmp(true)]] as const).map(([l, c]) => (
+            <tbody>{([["APPROVED (real)", cmp("real")], ["BLOCKED BY RISK (shadow)", cmp("risk")], ["VETOED (shadow)", cmp("vetoed")]] as const).map(([l, c]) => (
               <tr key={l} className="border-t border-border/50"><td>{l}</td><td className="tabular-nums">{c.n}</td><td className="tabular-nums">{fmt(c.wr * 100, 1)}%</td><td className="tabular-nums">{fmt(c.avg, 3)}</td></tr>
             ))}</tbody>
           </table>
