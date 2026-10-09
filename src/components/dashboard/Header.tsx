@@ -39,6 +39,7 @@ export function Header({ portfolio }: { portfolio: number }) {
             <div className="text-[10px] tracking-[0.3em] text-muted-foreground">SYSTEM TIME</div>
             <div className="font-mono text-lg text-foreground tabular-nums">{time}</div>
           </div>
+          <Link to="/desk" className="rounded border border-border bg-terminal px-3 py-1.5 text-xs tracking-widest text-neon hover:opacity-80">DESK</Link>
           <Link to="/backtest" className="rounded border border-border bg-terminal px-3 py-1.5 text-xs tracking-widest text-neon hover:opacity-80">BACKTEST</Link>
           <button onClick={signOut} className="rounded border border-border bg-terminal px-3 py-1.5 text-xs tracking-widest text-muted-foreground hover:text-neon">SIGN OUT</button>
           <div className="flex items-center gap-2 rounded border border-border bg-terminal px-3 py-1.5">

@@ -14,6 +14,8 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedBacktestRouteImport } from './routes/_authenticated/backtest'
 import { Route as ApiCronHlSyncRouteImport } from './routes/api/cron/hl-sync'
+import { Route as ApiCronDeskExecuteRouteImport } from './routes/api/cron/desk-execute'
+import { Route as ApiCronDeskCycleRouteImport } from './routes/api/cron/desk-cycle'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -39,17 +41,31 @@ const ApiCronHlSyncRoute = ApiCronHlSyncRouteImport.update({
   path: '/api/cron/hl-sync',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronDeskExecuteRoute = ApiCronDeskExecuteRouteImport.update({
+  id: '/api/cron/desk-execute',
+  path: '/api/cron/desk-execute',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCronDeskCycleRoute = ApiCronDeskCycleRouteImport.update({
+  id: '/api/cron/desk-cycle',
+  path: '/api/cron/desk-cycle',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
   '/backtest': typeof AuthenticatedBacktestRoute
+  '/api/cron/desk-cycle': typeof ApiCronDeskCycleRoute
+  '/api/cron/desk-execute': typeof ApiCronDeskExecuteRoute
   '/api/cron/hl-sync': typeof ApiCronHlSyncRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/backtest': typeof AuthenticatedBacktestRoute
   '/': typeof AuthenticatedIndexRoute
+  '/api/cron/desk-cycle': typeof ApiCronDeskCycleRoute
+  '/api/cron/desk-execute': typeof ApiCronDeskExecuteRoute
   '/api/cron/hl-sync': typeof ApiCronHlSyncRoute
 }
 export interface FileRoutesById {
@@ -58,25 +74,43 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_authenticated/backtest': typeof AuthenticatedBacktestRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/api/cron/desk-cycle': typeof ApiCronDeskCycleRoute
+  '/api/cron/desk-execute': typeof ApiCronDeskExecuteRoute
   '/api/cron/hl-sync': typeof ApiCronHlSyncRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/backtest' | '/api/cron/hl-sync'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/backtest'
+    | '/api/cron/desk-cycle'
+    | '/api/cron/desk-execute'
+    | '/api/cron/hl-sync'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/backtest' | '/' | '/api/cron/hl-sync'
+  to:
+    | '/login'
+    | '/backtest'
+    | '/'
+    | '/api/cron/desk-cycle'
+    | '/api/cron/desk-execute'
+    | '/api/cron/hl-sync'
   id:
     | '__root__'
     | '/_authenticated'
     | '/login'
     | '/_authenticated/backtest'
     | '/_authenticated/'
+    | '/api/cron/desk-cycle'
+    | '/api/cron/desk-execute'
     | '/api/cron/hl-sync'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ApiCronDeskCycleRoute: typeof ApiCronDeskCycleRoute
+  ApiCronDeskExecuteRoute: typeof ApiCronDeskExecuteRoute
   ApiCronHlSyncRoute: typeof ApiCronHlSyncRoute
 }
 
@@ -117,6 +151,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronHlSyncRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/desk-execute': {
+      id: '/api/cron/desk-execute'
+      path: '/api/cron/desk-execute'
+      fullPath: '/api/cron/desk-execute'
+      preLoaderRoute: typeof ApiCronDeskExecuteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron/desk-cycle': {
+      id: '/api/cron/desk-cycle'
+      path: '/api/cron/desk-cycle'
+      fullPath: '/api/cron/desk-cycle'
+      preLoaderRoute: typeof ApiCronDeskCycleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -136,6 +184,8 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   LoginRoute: LoginRoute,
+  ApiCronDeskCycleRoute: ApiCronDeskCycleRoute,
+  ApiCronDeskExecuteRoute: ApiCronDeskExecuteRoute,
   ApiCronHlSyncRoute: ApiCronHlSyncRoute,
 }
 export const routeTree = rootRouteImport
