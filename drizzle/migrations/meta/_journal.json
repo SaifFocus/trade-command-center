@@ -8,6 +8,13 @@
       "when": 1791503866284,
       "tag": "0000_hl_market_data_and_backtest",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791505519070,
+      "tag": "0001_owner_lockdown",
+      "breakpoints": true
     }
   ]
 }

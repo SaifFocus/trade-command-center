@@ -52,6 +52,39 @@ export type Database = {
           },
         ]
       }
+      app_owner: {
+        Row: {
+          claimed_at: string | null
+          id: number
+          user_id: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          id?: number
+          user_id: string
+        }
+        Update: {
+          claimed_at?: string | null
+          id?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      app_private: {
+        Row: {
+          name: string
+          value: string
+        }
+        Insert: {
+          name: string
+          value: string
+        }
+        Update: {
+          name?: string
+          value?: string
+        }
+        Relationships: []
+      }
       backtest_runs: {
         Row: {
           created_at: string | null
@@ -384,6 +417,8 @@ export type Database = {
     Functions: {
       hl_backtest_data: { Args: { p_coin: string }; Returns: Json }
       hl_latest_t: { Args: { p_coin: string }; Returns: Json }
+      is_owner: { Args: never; Returns: boolean }
+      verify_cron_secret: { Args: { p_token: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
