@@ -52,6 +52,191 @@ export type Database = {
           },
         ]
       }
+      backtest_runs: {
+        Row: {
+          created_at: string | null
+          error: string | null
+          id: string
+          params: Json | null
+          status: string | null
+          summary: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          error?: string | null
+          id?: string
+          params?: Json | null
+          status?: string | null
+          summary?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          error?: string | null
+          id?: string
+          params?: Json | null
+          status?: string | null
+          summary?: Json | null
+        }
+        Relationships: []
+      }
+      backtest_trades: {
+        Row: {
+          bars_held: number | null
+          coin: string | null
+          entry_px: number | null
+          entry_t: string | null
+          exit_px: number | null
+          exit_reason: string | null
+          exit_t: string | null
+          fee_r: number | null
+          funding_r: number | null
+          gross_r: number | null
+          id: number
+          net_r: number | null
+          run_id: string | null
+          sample: string | null
+          setup: string | null
+          side: string | null
+          stop_px: number | null
+          t1_px: number | null
+          t2_px: number | null
+        }
+        Insert: {
+          bars_held?: number | null
+          coin?: string | null
+          entry_px?: number | null
+          entry_t?: string | null
+          exit_px?: number | null
+          exit_reason?: string | null
+          exit_t?: string | null
+          fee_r?: number | null
+          funding_r?: number | null
+          gross_r?: number | null
+          id?: number
+          net_r?: number | null
+          run_id?: string | null
+          sample?: string | null
+          setup?: string | null
+          side?: string | null
+          stop_px?: number | null
+          t1_px?: number | null
+          t2_px?: number | null
+        }
+        Update: {
+          bars_held?: number | null
+          coin?: string | null
+          entry_px?: number | null
+          entry_t?: string | null
+          exit_px?: number | null
+          exit_reason?: string | null
+          exit_t?: string | null
+          fee_r?: number | null
+          funding_r?: number | null
+          gross_r?: number | null
+          id?: number
+          net_r?: number | null
+          run_id?: string | null
+          sample?: string | null
+          setup?: string | null
+          side?: string | null
+          stop_px?: number | null
+          t1_px?: number | null
+          t2_px?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backtest_trades_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "backtest_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hl_candles: {
+        Row: {
+          c: number | null
+          coin: string
+          h: number | null
+          interval: string
+          l: number | null
+          o: number | null
+          t: string
+          v: number | null
+        }
+        Insert: {
+          c?: number | null
+          coin: string
+          h?: number | null
+          interval: string
+          l?: number | null
+          o?: number | null
+          t: string
+          v?: number | null
+        }
+        Update: {
+          c?: number | null
+          coin?: string
+          h?: number | null
+          interval?: string
+          l?: number | null
+          o?: number | null
+          t?: string
+          v?: number | null
+        }
+        Relationships: []
+      }
+      hl_funding: {
+        Row: {
+          coin: string
+          premium: number | null
+          rate: number | null
+          t: string
+        }
+        Insert: {
+          coin: string
+          premium?: number | null
+          rate?: number | null
+          t: string
+        }
+        Update: {
+          coin?: string
+          premium?: number | null
+          rate?: number | null
+          t?: string
+        }
+        Relationships: []
+      }
+      hl_universe: {
+        Row: {
+          coin: string
+          day_ntl_vlm: number | null
+          funding: number | null
+          mark_px: number | null
+          max_leverage: number | null
+          open_interest: number | null
+          snapshot_at: string
+        }
+        Insert: {
+          coin: string
+          day_ntl_vlm?: number | null
+          funding?: number | null
+          mark_px?: number | null
+          max_leverage?: number | null
+          open_interest?: number | null
+          snapshot_at: string
+        }
+        Update: {
+          coin?: string
+          day_ntl_vlm?: number | null
+          funding?: number | null
+          mark_px?: number | null
+          max_leverage?: number | null
+          open_interest?: number | null
+          snapshot_at?: string
+        }
+        Relationships: []
+      }
       markets: {
         Row: {
           color: string | null
@@ -197,7 +382,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      hl_backtest_data: { Args: { p_coin: string }; Returns: Json }
+      hl_latest_t: { Args: { p_coin: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never

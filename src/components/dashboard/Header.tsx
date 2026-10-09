@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Activity } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 export function Header({ portfolio }: { portfolio: number }) {
   const [now, setNow] = useState(new Date());
@@ -36,6 +37,7 @@ export function Header({ portfolio }: { portfolio: number }) {
             <div className="text-[10px] tracking-[0.3em] text-muted-foreground">SYSTEM TIME</div>
             <div className="font-mono text-lg text-foreground tabular-nums">{time}</div>
           </div>
+          <Link to="/backtest" className="rounded border border-border bg-terminal px-3 py-1.5 text-xs tracking-widest text-neon hover:opacity-80">BACKTEST</Link>
           <div className="flex items-center gap-2 rounded border border-border bg-terminal px-3 py-1.5">
             <Activity className="h-4 w-4 text-neon" />
             <span className="text-xs text-muted-foreground tracking-widest">LATENCY 12ms</span>
