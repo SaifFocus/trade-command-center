@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { supabase } from "@/integrations/supabase/client";
 
 function NotFoundComponent() {
   return (
@@ -77,57 +78,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "APEX — Autonomous Trading System" },
-      {
-        name: "description",
-        content:
-          "APEX is an autonomous multi-agent trading system dashboard tracking live markets, agent activity and portfolio growth in SEK.",
-      },
-      { name: "author", content: "APEX Trading System" },
-      { property: "og:title", content: "APEX — Autonomous Trading System" },
-      {
-        property: "og:description",
-        content:
-          "Live multi-agent trading dashboard: market agents, activity log, portfolio allocation and paper trades.",
-      },
-      { property: "og:type", content: "website" },
-      { property: "og:site_name", content: "APEX Trading System" },
-      { name: "twitter:card", content: "summary" },
+      { name: "robots", content: "noindex, nofollow" },
+      { title: "APEX" },
     ],
     links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-      {
-        rel: "icon",
-        type: "image/png",
-        href: "/favicon.png",
-      },
-    ],
-    scripts: [
-      {
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "WebSite",
-          name: "APEX",
-          alternateName: "APEX Trading System",
-          url: "https://apextradyr.lovable.app",
-        }),
-      },
-      {
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "Organization",
-          name: "APEX",
-          brand: { "@type": "Brand", name: "APEX Trading System" },
-          url: "https://apextradyr.lovable.app",
-          description:
-            "Autonomous multi-agent trading system growing a 850 SEK seed toward a 1M SEK milestone.",
-        }),
-      },
+      { rel: "stylesheet", href: appCss },
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
     ],
   }),
 
@@ -153,6 +109,16 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+      router.invalidate();
+      if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
+    });
+    return () => data.subscription.unsubscribe();
+  }, [router, queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>

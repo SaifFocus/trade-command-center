@@ -4,15 +4,11 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { syncUniverseFn, syncCoinFn, runBacktestFn } from "@/lib/hl/hl.functions";
 
-export const Route = createFileRoute("/backtest")({
+export const Route = createFileRoute("/_authenticated/backtest")({
   head: () => ({
     meta: [
-      { title: "Backtest — APEX Crypto Swing Desk" },
-      { name: "description", content: "Hyperliquid market-data sync and swing-setup backtests in R-multiples." },
-      { property: "og:title", content: "Backtest — APEX Crypto Swing Desk" },
-      { property: "og:description", content: "Swing setup backtests on Hyperliquid public data." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { title: "APEX — Backtest" },
+      { name: "description", content: "Private backtest console." },
     ],
   }),
   component: BacktestPage,

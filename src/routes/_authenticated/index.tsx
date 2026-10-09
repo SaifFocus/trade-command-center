@@ -8,18 +8,12 @@ import { TradesTable } from "@/components/dashboard/TradesTable";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { useTrades } from "@/hooks/useTrades";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
-      { title: "APEX — Autonomous Trading System" },
-      { name: "description", content: "APEX autonomous multi-agent trading system dashboard — 850 SEK seed capital mission to 1M SEK." },
-      { property: "og:title", content: "APEX — Autonomous Trading System" },
-      { property: "og:description", content: "Multi-agent trading dashboard. Paper-mode active." },
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://apextradyr.lovable.app/" },
-      { name: "twitter:card", content: "summary" },
+      { title: "APEX — Dashboard" },
+      { name: "description", content: "Private APEX trading dashboard." },
     ],
-    links: [{ rel: "canonical", href: "https://apextradyr.lovable.app/" }],
   }),
   component: Dashboard,
 });
