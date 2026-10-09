@@ -165,8 +165,10 @@ export async function rebuildWatchlist(db: DB) {
   await db.from("sm_scores").update({ watchlist: false, practice: false }).or("watchlist.eq.true,practice.eq.true");
   if (top.size) await db.from("sm_scores").update({ watchlist: true }).in("address", Array.from(top));
   if (practice.length) await db.from("sm_scores").update({ watchlist: true, practice: true }).in("address", practice);
-  // Wallets that left the watchlist get a fresh baseline if they come back (see trackWatchlist).
-  await db.from("sm_scores").update({ tracked_at: null }).eq("watchlist", false).not("tracked_at", "is", null);
+  const { rebuildMimic } = await import("./mimic.server");
+  await rebuildMimic(db as never);
+  // Wallets no longer tracked get a fresh baseline if they come back (see trackWatchlist).
+  await db.from("sm_scores").update({ tracked_at: null }).eq("watchlist", false).eq("mirror", false).not("tracked_at", "is", null);
   return top.size;
 }
 

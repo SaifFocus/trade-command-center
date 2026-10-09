@@ -85,6 +85,13 @@
       "when": 1791585000000,
       "tag": "0011_practice_follow",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791586800000,
+      "tag": "0012_mimic_sim",
+      "breakpoints": true
     }
   ]
 }

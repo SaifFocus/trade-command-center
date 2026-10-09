@@ -51,6 +51,7 @@ function ScoutPage() {
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [jobs, setJobs] = useState<Row[]>([]);
   const [events, setEvents] = useState<Row[]>([]);
+  const [mimic, setMimic] = useState<Row[]>([]);
   const [copyRun, setCopyRun] = useState<Row | null>(null);
   const [counts, setCounts] = useState<{ candidates: number; invo: number; lb: number }>({ candidates: 0, invo: 0, lb: 0 });
   const [tier, setTier] = useState<"all" | "A" | "B" | "AB" | "P">("AB");
@@ -95,6 +96,9 @@ function ScoutPage() {
     }));
     setJobs((jb.data ?? []) as Row[]);
     setEvents((ev.data ?? []) as Row[]);
+    // mimic_trades is not in the generated types
+    const { data: mt } = await (supabase as unknown as { from: (t: string) => any }).from("mimic_trades").select("*").order("opened_at", { ascending: false }).limit(500);
+    setMimic((mt ?? []) as Row[]);
     setCopyRun(((runs.data ?? []) as Row[])[0] ?? null);
     setCounts({ candidates: cand.count ?? 0, invo: invo.count ?? 0, lb: lb.count ?? 0 });
   };
@@ -196,6 +200,8 @@ function ScoutPage() {
           </Panel>
         </div>
 
+        <MimicPanel rows={mimic} />
+
         <Panel title={`GRADED TRADERS (${shown.length})`} right={
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <select className={sel} value={tier} onChange={(e) => setTier(e.target.value as typeof tier)}>
@@ -259,5 +265,37 @@ function ScoutPage() {
         <div className="break-all font-mono text-[11px] text-muted-foreground">{status}</div>
       </main>
     </div>
+  );
+}
+
+function MimicPanel({ rows }: { rows: Row[] }) {
+  const closed = rows.filter((r) => r.status === "closed");
+  const open = rows.filter((r) => r.status === "open");
+  const wins = closed.filter((r) => +r.net_usd > 0).length;
+  const net = closed.reduce((a, r) => a + +r.net_usd, 0);
+  const avg = closed.length ? closed.reduce((a, r) => a + +r.net_pct, 0) / closed.length : 0;
+  return (
+    <Panel title="MIMIC SIMULATOR (PAPER) · $100 COPIES OF ACTIVE INVO TRADERS, A FEW MINUTES LATE, AFTER INVO FEES">
+      <div className="mb-2 text-xs">
+        Closed <span className="tabular-nums">{closed.length}</span> · win rate <span className="tabular-nums">{closed.length ? ((wins / closed.length) * 100).toFixed(1) : "—"}%</span> ·
+        avg <span className={`tabular-nums ${avg >= 0 ? "text-neon" : "text-destructive"}`}>{avg.toFixed(2)}%</span> per trade ·
+        total <span className={`tabular-nums ${net >= 0 ? "text-neon" : "text-destructive"}`}>${net.toFixed(2)}</span> · open <span className="tabular-nums">{open.length}</span>
+      </div>
+      {rows.length === 0 ? <div className="text-xs text-muted-foreground">No copies yet. Traders are picked once graded Invo wallets qualify (active in the last 3 days, 20+ trades, profit factor 1.2+, profitable).</div> : (
+        <div className="max-h-64 overflow-y-auto"><table className="w-full text-xs">
+          <thead className="text-muted-foreground"><tr className="text-left"><th>OPENED</th><th>TRADER</th><th>COIN</th><th>SIDE</th><th>ENTRY</th><th>THEIR ENTRY</th><th>EXIT</th><th>NET %</th><th>STATUS</th></tr></thead>
+          <tbody>{rows.slice(0, 60).map((r) => (
+            <tr key={r.id} className="border-t border-border/50">
+              <td>{new Date(r.opened_at).toLocaleString("sv-SE", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</td>
+              <td className="font-mono">{String(r.address).slice(0, 6)}…{String(r.address).slice(-4)}</td><td>{r.coin}</td><td>{String(r.side).toUpperCase()}</td>
+              <td className="tabular-nums">{(+r.entry_px).toPrecision(6)}</td><td className="tabular-nums">{r.their_entry_px ? (+r.their_entry_px).toPrecision(6) : "—"}</td>
+              <td className="tabular-nums">{r.exit_px ? (+r.exit_px).toPrecision(6) : "—"}</td>
+              <td className={`tabular-nums ${+(r.net_pct ?? 0) >= 0 ? "text-neon" : "text-destructive"}`}>{r.net_pct == null ? "—" : (+r.net_pct).toFixed(2)}</td>
+              <td>{r.status === "open" ? "OPEN" : r.exit_reason}</td>
+            </tr>
+          ))}</tbody>
+        </table></div>
+      )}
+    </Panel>
   );
 }

@@ -6,6 +6,8 @@ import { atr, type Bar } from "@/lib/hl/engine";
 import { liquidCoins } from "./deep.server";
 import { smLog } from "./candidates.server";
 
+import { mimicStep, type TrackEvent } from "./mimic.server";
+
 type DB = SupabaseClient<Database>;
 type CH = {
   marginSummary: { accountValue: string };
@@ -24,8 +26,9 @@ export async function dailyAtr(coin: string): Promise<number | null> {
 }
 
 export async function trackWatchlist(db: DB) {
-  const { data: wl } = await db.from("sm_scores").select("address,tier,score,tracked_at").eq("watchlist", true);
-  const events: { address: string; coin: string; side: string; kind: string }[] = [];
+  // Watched wallets (follow signals) plus mirrored Invo traders (Mimic simulator).
+  const { data: wl } = await db.from("sm_scores").select("address,tier,score,tracked_at,mirror").or("watchlist.eq.true,mirror.eq.true");
+  const events: TrackEvent[] = [];
   const nowIso = new Date().toISOString();
   for (const w of wl ?? []) {
     let ch: CH;
@@ -52,7 +55,7 @@ export async function trackWatchlist(db: DB) {
       if (kind && !baseline) {
         await db.from("sm_events").insert({ address: w.address, coin: p.coin, side, kind, size, entry_px: p.entryPx ? +p.entryPx : null,
           leverage: p.leverage?.value ?? null, notional_frac: av > 0 ? notional / av : null });
-        events.push({ address: w.address, coin: p.coin, side, kind });
+        events.push({ address: w.address, coin: p.coin, side, kind, entry_px: p.entryPx ? +p.entryPx : null, leverage: p.leverage?.value ?? null });
       }
       await db.from("sm_positions").upsert({ address: w.address, coin: p.coin, side, szi, entry_px: p.entryPx ? +p.entryPx : null, notional,
         leverage: p.leverage?.value ?? null, account_value: av, opened_at: kind === "open" ? nowIso : openedAt, updated_at: nowIso });
@@ -71,7 +74,13 @@ export async function trackWatchlist(db: DB) {
 
   const signals = await followSignals(db);
   const exits = await followExits(db);
-  return { wallets: wl?.length ?? 0, events: events.length, signals, exits };
+  const mirror = new Set((wl ?? []).filter((w) => w.mirror).map((w) => w.address));
+  let mimic: unknown = null;
+  if (mirror.size || events.length) {
+    const [mids, liquid] = await Promise.all([hlInfo<Record<string, string>>({ type: "allMids" }), liquidCoins(db)]);
+    mimic = await mimicStep(db as never, events, mirror, mids, liquid);
+  }
+  return { wallets: wl?.length ?? 0, mirror: mirror.size, events: events.length, signals, exits, mimic };
 }
 
 async function followSignals(db: DB) {

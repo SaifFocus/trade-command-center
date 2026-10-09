@@ -789,6 +789,7 @@ export type Database = {
           eligible: boolean
           fast: boolean
           filters: Json | null
+          mirror: boolean
           practice: boolean
           score: number
           tier: string | null
@@ -804,6 +805,7 @@ export type Database = {
           eligible?: boolean
           fast?: boolean
           filters?: Json | null
+          mirror?: boolean
           practice?: boolean
           score: number
           tier?: string | null
@@ -819,6 +821,7 @@ export type Database = {
           eligible?: boolean
           fast?: boolean
           filters?: Json | null
+          mirror?: boolean
           practice?: boolean
           score?: number
           tier?: string | null
