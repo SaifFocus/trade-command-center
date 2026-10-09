@@ -9,86 +9,68 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as BacktestRouteImport } from './routes/backtest'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiPublicHlSyncRouteImport } from './routes/api/public/hl-sync'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedBacktestRouteImport } from './routes/_authenticated/backtest'
 
-const BacktestRoute = BacktestRouteImport.update({
-  id: '/backtest',
-  path: '/backtest',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
+  id: '/_authenticated/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicHlSyncRoute = ApiPublicHlSyncRouteImport.update({
-  id: '/api/public/hl-sync',
-  path: '/api/public/hl-sync',
+const AuthenticatedBacktestRoute = AuthenticatedBacktestRouteImport.update({
+  id: '/_authenticated/backtest',
+  path: '/backtest',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/backtest': typeof BacktestRoute
-  '/api/public/hl-sync': typeof ApiPublicHlSyncRoute
+  '/backtest': typeof AuthenticatedBacktestRoute
+  '/': typeof AuthenticatedIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/backtest': typeof BacktestRoute
-  '/api/public/hl-sync': typeof ApiPublicHlSyncRoute
+  '/backtest': typeof AuthenticatedBacktestRoute
+  '/': typeof AuthenticatedIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/backtest': typeof BacktestRoute
-  '/api/public/hl-sync': typeof ApiPublicHlSyncRoute
+  '/_authenticated/backtest': typeof AuthenticatedBacktestRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/backtest' | '/api/public/hl-sync'
+  fullPaths: '/backtest' | '/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/backtest' | '/api/public/hl-sync'
-  id: '__root__' | '/' | '/backtest' | '/api/public/hl-sync'
+  to: '/backtest' | '/'
+  id: '__root__' | '/_authenticated/backtest' | '/_authenticated/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  BacktestRoute: typeof BacktestRoute
-  ApiPublicHlSyncRoute: typeof ApiPublicHlSyncRoute
+  AuthenticatedBacktestRoute: typeof AuthenticatedBacktestRoute
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/backtest': {
-      id: '/backtest'
-      path: '/backtest'
-      fullPath: '/backtest'
-      preLoaderRoute: typeof BacktestRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
+    '/_authenticated/': {
+      id: '/_authenticated/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/hl-sync': {
-      id: '/api/public/hl-sync'
-      path: '/api/public/hl-sync'
-      fullPath: '/api/public/hl-sync'
-      preLoaderRoute: typeof ApiPublicHlSyncRouteImport
+    '/_authenticated/backtest': {
+      id: '/_authenticated/backtest'
+      path: '/backtest'
+      fullPath: '/backtest'
+      preLoaderRoute: typeof AuthenticatedBacktestRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  BacktestRoute: BacktestRoute,
-  ApiPublicHlSyncRoute: ApiPublicHlSyncRoute,
+  AuthenticatedBacktestRoute: AuthenticatedBacktestRoute,
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
