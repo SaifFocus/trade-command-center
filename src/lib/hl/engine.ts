@@ -185,7 +185,10 @@ export function closeFrac(p: PosState, frac: number, px: number, costRate: numbe
 }
 
 /** Manage a position over one closed 4H bar. Mutates p. Returns the final exit or null if still open. */
-export function stepPosition(p: PosState, b: Bar, fund4: number, costRate: number): { px: number; reason: string } | null {
+export function stepPosition(
+  p: PosState, b: Bar, fund4: number, costRate: number,
+  limits: { timeStop: number; maxHold: number } = { timeStop: 42, maxHold: 84 },
+): { px: number; reason: string } | null {
   const exit = (px: number, reason: string) => { closeFrac(p, p.remaining, px, costRate); return { px, reason }; };
   p.bars++;
   p.funding += (p.dir * fund4 * p.entry * p.remaining) / p.R;
@@ -207,8 +210,8 @@ export function stepPosition(p: PosState, b: Bar, fund4: number, costRate: numbe
     const hitT2 = p.dir === 1 ? b.h >= p.t2 : b.l <= p.t2;
     if (hitT2) return exit(p.t2, "t2");
   }
-  if (!p.t1hit && p.bars >= 42) return exit(b.c, "time_stop");
-  if (p.bars >= 84) return exit(b.c, "max_hold");
+  if (!p.t1hit && p.bars >= limits.timeStop) return exit(b.c, "time_stop");
+  if (p.bars >= limits.maxHold) return exit(b.c, "max_hold");
   return null;
 }
 
