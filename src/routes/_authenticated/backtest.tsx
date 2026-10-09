@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { syncUniverseFn, syncCoinFn, runBacktestFn } from "@/lib/hl/hl.functions";
 
-export const Route = createFileRoute("/backtest")({
+export const Route = createFileRoute("/_authenticated/backtest")({
   head: () => ({
     meta: [
       { title: "Backtest — APEX Crypto Swing Desk" },

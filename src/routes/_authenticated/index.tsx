@@ -8,7 +8,7 @@ import { TradesTable } from "@/components/dashboard/TradesTable";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { useTrades } from "@/hooks/useTrades";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
       { title: "APEX — Autonomous Trading System" },

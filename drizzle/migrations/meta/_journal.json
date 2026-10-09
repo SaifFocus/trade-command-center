@@ -15,6 +15,13 @@
       "when": 1791505519070,
       "tag": "0001_owner_lockdown",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791505547697,
+      "tag": "0002_block_signup_after_owner",
+      "breakpoints": true
     }
   ]
 }
