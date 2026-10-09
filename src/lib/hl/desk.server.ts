@@ -78,7 +78,8 @@ async function managePositions(db: DB, data: Map<string, CoinData>, cfg: DeskCfg
     let lastBar = lastT;
     for (const b of bars) {
       lastBar = b.t;
-      ex = stepPosition(st, b, cd.f4h.get(b.t)?.s ?? 0, costRate);
+      ex = stepPosition(st, b, cd.f4h.get(b.t)?.s ?? 0, costRate,
+        pos.setup === "smart_money_follow" ? { timeStop: Infinity, maxHold: 84 } : undefined);
       if (ex) break;
     }
     const upd: Database["public"]["Tables"]["paper_positions"]["Update"] = {
@@ -278,6 +279,7 @@ async function insertPosition(db: DB, s: any, z: ReturnType<typeof sizePosition>
     signal_id: s.id, shadow, coin: s.coin, side: s.side, setup: s.setup, entry_t: now.toISOString(), entry_px: z.entry,
     init_stop_px: +s.stop_px, stop_px: +s.stop_px, t1_px: z.t1, t2_px: z.t2, size_coin: z.size_coin, notional_usd: z.notional_usd,
     margin_usd: z.margin_usd, leverage: z.leverage, risk_usd: z.risk_usd, fees_usd: (z.notional_usd * cfg.fee_pct) / 100,
+    follow_wallets: s.setup === "smart_money_follow" ? ((s.context?.wallets ?? []) as { address: string }[]).map((w) => w.address) : null,
   });
   if (error) throw new Error(`paper_positions insert: ${error.message}`);
 }
