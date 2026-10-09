@@ -36,6 +36,13 @@
       "when": 1791560718193,
       "tag": "0004_smart_money_scout",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791560899289,
+      "tag": "0005_sm_coin_hourly",
+      "breakpoints": true
     }
   ]
 }

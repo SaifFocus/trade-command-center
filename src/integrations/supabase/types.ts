@@ -1086,6 +1086,7 @@ export type Database = {
       hl_backtest_data: { Args: { p_coin: string }; Returns: Json }
       hl_latest_t: { Args: { p_coin: string }; Returns: Json }
       is_owner: { Args: never; Returns: boolean }
+      sm_coin_hourly: { Args: { p_coin: string }; Returns: Json }
       sm_invo_agg: {
         Args: { p_since: string }
         Returns: {
@@ -1095,6 +1096,7 @@ export type Database = {
           originated: number
         }[]
       }
+      sm_latest_t: { Args: { p_coin: string }; Returns: Json }
       submit_review: {
         Args: {
           p_confidence: number
