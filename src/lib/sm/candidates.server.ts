@@ -165,10 +165,13 @@ export async function ingestInvo(db: DB, budgetMs = 200_000) {
 }
 
 async function refreshInvoCandidates(db: DB, since: string) {
-  const { data, error } = await db.rpc("sm_invo_agg", { p_since: since });
-  if (error) throw new Error(`sm_invo_agg: ${error.message}`);
-  const all = (data ?? []) as { address: string; fills: number; opens: number; originated: number }[];
-  const rows = all.filter((r) => Number(r.fills) >= 30);
+  const rows: { address: string; fills: number; opens: number; originated: number }[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await db.rpc("sm_invo_agg2", { p_since: since, p_min: 30 }).range(from, from + 999);
+    if (error) throw new Error(`sm_invo_agg2: ${error.message}`);
+    rows.push(...((data ?? []) as any[]));
+    if ((data ?? []).length < 1000) break;
+  }
   await mergeWallets(db, rows.map((r) => ({
     address: r.address, source: "invo",
     patch: { invo_fills_60d: Number(r.fills), invo_opens_60d: Number(r.opens), invo_originator_share: Number(r.opens) ? Math.min(1, Number(r.originated) / Number(r.opens)) : null },
