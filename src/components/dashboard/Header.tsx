@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Activity } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { useSignOut } from "@/routes/_authenticated/route";
 
 export function Header({ portfolio }: { portfolio: number }) {
+  const signOut = useSignOut();
   const [now, setNow] = useState(new Date());
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -38,6 +40,7 @@ export function Header({ portfolio }: { portfolio: number }) {
             <div className="font-mono text-lg text-foreground tabular-nums">{time}</div>
           </div>
           <Link to="/backtest" className="rounded border border-border bg-terminal px-3 py-1.5 text-xs tracking-widest text-neon hover:opacity-80">BACKTEST</Link>
+          <button onClick={signOut} className="rounded border border-border bg-terminal px-3 py-1.5 text-xs tracking-widest text-muted-foreground hover:text-neon">SIGN OUT</button>
           <div className="flex items-center gap-2 rounded border border-border bg-terminal px-3 py-1.5">
             <Activity className="h-4 w-4 text-neon" />
             <span className="text-xs text-muted-foreground tracking-widest">LATENCY 12ms</span>
