@@ -186,6 +186,72 @@ export type Database = {
           },
         ]
       }
+      desk_config: {
+        Row: {
+          budget_sek: number
+          daily_loss_pct: number
+          enabled_setups: string[]
+          fee_pct: number
+          id: number
+          kill_drawdown_pct: number
+          kill_switch: boolean
+          max_open: number
+          max_risk_pct: number
+          min_order_usd: number
+          mode: string
+          night_rule: boolean
+          review_window_minutes: number
+          risk_pct: number
+          slip_pct: number
+          updated_at: string | null
+          usd_sek: number | null
+          usd_sek_updated_at: string | null
+          weekly_loss_pct: number
+        }
+        Insert: {
+          budget_sek?: number
+          daily_loss_pct?: number
+          enabled_setups?: string[]
+          fee_pct?: number
+          id?: number
+          kill_drawdown_pct?: number
+          kill_switch?: boolean
+          max_open?: number
+          max_risk_pct?: number
+          min_order_usd?: number
+          mode?: string
+          night_rule?: boolean
+          review_window_minutes?: number
+          risk_pct?: number
+          slip_pct?: number
+          updated_at?: string | null
+          usd_sek?: number | null
+          usd_sek_updated_at?: string | null
+          weekly_loss_pct?: number
+        }
+        Update: {
+          budget_sek?: number
+          daily_loss_pct?: number
+          enabled_setups?: string[]
+          fee_pct?: number
+          id?: number
+          kill_drawdown_pct?: number
+          kill_switch?: boolean
+          max_open?: number
+          max_risk_pct?: number
+          min_order_usd?: number
+          mode?: string
+          night_rule?: boolean
+          review_window_minutes?: number
+          risk_pct?: number
+          slip_pct?: number
+          updated_at?: string | null
+          usd_sek?: number | null
+          usd_sek_updated_at?: string | null
+          weekly_loss_pct?: number
+        }
+        Relationships: []
+      }
       hl_candles: {
         Row: {
           c: number | null
@@ -330,6 +396,137 @@ export type Database = {
         }
         Relationships: []
       }
+      paper_equity: {
+        Row: {
+          equity_usd: number
+          id: number
+          note: string | null
+          open_risk_usd: number
+          t: string
+        }
+        Insert: {
+          equity_usd: number
+          id?: number
+          note?: string | null
+          open_risk_usd?: number
+          t?: string
+        }
+        Update: {
+          equity_usd?: number
+          id?: number
+          note?: string | null
+          open_risk_usd?: number
+          t?: string
+        }
+        Relationships: []
+      }
+      paper_positions: {
+        Row: {
+          bars_held: number
+          coin: string
+          entry_px: number
+          entry_t: string
+          exit_px: number | null
+          exit_reason: string | null
+          exit_t: string | null
+          fees_usd: number
+          funding_usd: number
+          gross_usd: number
+          id: string
+          init_stop_px: number
+          last_bar_t: string | null
+          leverage: number
+          margin_usd: number
+          net_r: number | null
+          net_usd: number | null
+          notional_usd: number
+          remaining_frac: number
+          risk_usd: number
+          setup: string
+          shadow: boolean
+          side: string
+          signal_id: string | null
+          size_coin: number
+          status: string
+          stop_px: number
+          t1_hit: boolean
+          t1_px: number
+          t2_px: number
+        }
+        Insert: {
+          bars_held?: number
+          coin: string
+          entry_px: number
+          entry_t: string
+          exit_px?: number | null
+          exit_reason?: string | null
+          exit_t?: string | null
+          fees_usd?: number
+          funding_usd?: number
+          gross_usd?: number
+          id?: string
+          init_stop_px: number
+          last_bar_t?: string | null
+          leverage: number
+          margin_usd: number
+          net_r?: number | null
+          net_usd?: number | null
+          notional_usd: number
+          remaining_frac?: number
+          risk_usd: number
+          setup: string
+          shadow?: boolean
+          side: string
+          signal_id?: string | null
+          size_coin: number
+          status?: string
+          stop_px: number
+          t1_hit?: boolean
+          t1_px: number
+          t2_px: number
+        }
+        Update: {
+          bars_held?: number
+          coin?: string
+          entry_px?: number
+          entry_t?: string
+          exit_px?: number | null
+          exit_reason?: string | null
+          exit_t?: string | null
+          fees_usd?: number
+          funding_usd?: number
+          gross_usd?: number
+          id?: string
+          init_stop_px?: number
+          last_bar_t?: string | null
+          leverage?: number
+          margin_usd?: number
+          net_r?: number | null
+          net_usd?: number | null
+          notional_usd?: number
+          remaining_frac?: number
+          risk_usd?: number
+          setup?: string
+          shadow?: boolean
+          side?: string
+          signal_id?: string | null
+          size_coin?: number
+          status?: string
+          stop_px?: number
+          t1_hit?: boolean
+          t1_px?: number
+          t2_px?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paper_positions_signal_id_fkey"
+            columns: ["signal_id"]
+            isOneToOne: false
+            referencedRelation: "signals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       portfolio_snapshots: {
         Row: {
           id: number
@@ -345,6 +542,66 @@ export type Database = {
           id?: number
           snapshot_at?: string | null
           total_sek?: number
+        }
+        Relationships: []
+      }
+      signals: {
+        Row: {
+          coin: string
+          context: Json | null
+          created_at: string
+          id: string
+          ref_px: number
+          regime: string | null
+          review: Json | null
+          reviewed_at: string | null
+          risk_note: string | null
+          setup: string
+          side: string
+          signal_bar_t: string
+          status: string
+          stop_dist_pct: number
+          stop_px: number
+          t1_px: number
+          t2_px: number
+        }
+        Insert: {
+          coin: string
+          context?: Json | null
+          created_at?: string
+          id?: string
+          ref_px: number
+          regime?: string | null
+          review?: Json | null
+          reviewed_at?: string | null
+          risk_note?: string | null
+          setup: string
+          side: string
+          signal_bar_t: string
+          status?: string
+          stop_dist_pct: number
+          stop_px: number
+          t1_px: number
+          t2_px: number
+        }
+        Update: {
+          coin?: string
+          context?: Json | null
+          created_at?: string
+          id?: string
+          ref_px?: number
+          regime?: string | null
+          review?: Json | null
+          reviewed_at?: string | null
+          risk_note?: string | null
+          setup?: string
+          side?: string
+          signal_bar_t?: string
+          status?: string
+          stop_dist_pct?: number
+          stop_px?: number
+          t1_px?: number
+          t2_px?: number
         }
         Relationships: []
       }
@@ -418,6 +675,40 @@ export type Database = {
       hl_backtest_data: { Args: { p_coin: string }; Returns: Json }
       hl_latest_t: { Args: { p_coin: string }; Returns: Json }
       is_owner: { Args: never; Returns: boolean }
+      submit_review: {
+        Args: {
+          p_confidence: number
+          p_crowding_flag: boolean
+          p_decision: string
+          p_notes: Json
+          p_signal_id: string
+        }
+        Returns: {
+          coin: string
+          context: Json | null
+          created_at: string
+          id: string
+          ref_px: number
+          regime: string | null
+          review: Json | null
+          reviewed_at: string | null
+          risk_note: string | null
+          setup: string
+          side: string
+          signal_bar_t: string
+          status: string
+          stop_dist_pct: number
+          stop_px: number
+          t1_px: number
+          t2_px: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "signals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       verify_cron_secret: { Args: { p_token: string }; Returns: boolean }
     }
     Enums: {
