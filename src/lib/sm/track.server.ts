@@ -24,13 +24,16 @@ export async function dailyAtr(coin: string): Promise<number | null> {
 }
 
 export async function trackWatchlist(db: DB) {
-  const { data: wl } = await db.from("sm_scores").select("address,tier,score").eq("watchlist", true);
+  const { data: wl } = await db.from("sm_scores").select("address,tier,score,tracked_at").eq("watchlist", true);
   const events: { address: string; coin: string; side: string; kind: string }[] = [];
   const nowIso = new Date().toISOString();
   for (const w of wl ?? []) {
     let ch: CH;
     try { ch = await hlInfo<CH>({ type: "clearinghouseState", user: w.address }); } catch { continue; }
     const av = +ch.marginSummary.accountValue;
+    // First look at a newly watched wallet: record what it already holds as the baseline, without events, so positions it
+    // opened days ago never become follow signals. Only opens seen after this count.
+    const baseline = !w.tracked_at;
     const { data: prev } = await db.from("sm_positions").select("*").eq("address", w.address);
     const pm = new Map((prev ?? []).map((p) => [p.coin, p]));
     const seen = new Set<string>();
@@ -46,7 +49,7 @@ export async function trackWatchlist(db: DB) {
         await db.from("sm_events").insert({ address: w.address, coin: p.coin, side: old.side, kind: "close", size: Math.abs(+old.szi), entry_px: old.entry_px }); }
       else if (Math.abs(szi) > Math.abs(+old.szi) * 1.0001) { kind = "increase"; size = Math.abs(szi) - Math.abs(+old.szi); }
       else if (Math.abs(szi) < Math.abs(+old.szi) * 0.9999) { kind = "reduce"; size = Math.abs(+old.szi) - Math.abs(szi); }
-      if (kind) {
+      if (kind && !baseline) {
         await db.from("sm_events").insert({ address: w.address, coin: p.coin, side, kind, size, entry_px: p.entryPx ? +p.entryPx : null,
           leverage: p.leverage?.value ?? null, notional_frac: av > 0 ? notional / av : null });
         events.push({ address: w.address, coin: p.coin, side, kind });
@@ -54,6 +57,7 @@ export async function trackWatchlist(db: DB) {
       await db.from("sm_positions").upsert({ address: w.address, coin: p.coin, side, szi, entry_px: p.entryPx ? +p.entryPx : null, notional,
         leverage: p.leverage?.value ?? null, account_value: av, opened_at: kind === "open" ? nowIso : openedAt, updated_at: nowIso });
     }
+    if (baseline) await db.from("sm_scores").update({ tracked_at: nowIso }).eq("address", w.address);
     for (const old of prev ?? []) {
       if (seen.has(old.coin)) continue;
       await db.from("sm_events").insert({ address: w.address, coin: old.coin, side: old.side, kind: "close", size: Math.abs(+old.szi), entry_px: old.entry_px });

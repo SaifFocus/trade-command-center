@@ -792,6 +792,7 @@ export type Database = {
           practice: boolean
           score: number
           tier: string | null
+          tracked_at: string | null
           watchlist: boolean
         }
         Insert: {
@@ -806,6 +807,7 @@ export type Database = {
           practice?: boolean
           score: number
           tier?: string | null
+          tracked_at?: string | null
           watchlist?: boolean
         }
         Update: {
@@ -820,6 +822,7 @@ export type Database = {
           practice?: boolean
           score?: number
           tier?: string | null
+          tracked_at?: string | null
           watchlist?: boolean
         }
         Relationships: []

@@ -1,5 +1,7 @@
 -- Practice follows (paper only): watchlist wallets below the full A/B bar; their opens become 'practice_follow' signals.
 ALTER TABLE public.sm_scores ADD COLUMN IF NOT EXISTS practice boolean NOT NULL DEFAULT false;
+-- Set on a watched wallet's first snapshot; existing positions at that moment are a baseline, not follow signals.
+ALTER TABLE public.sm_scores ADD COLUMN IF NOT EXISTS tracked_at timestamptz;
 UPDATE public.desk_config SET enabled_setups = array_append(enabled_setups, 'practice_follow')
 WHERE id = 1 AND NOT ('practice_follow' = ANY(enabled_setups));
 
