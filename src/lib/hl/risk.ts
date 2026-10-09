@@ -50,7 +50,8 @@ export function sizePosition(cfg: DeskCfg, coin: string, side: "long" | "short",
 export function evaluateEntry(x: EntryInput): EntryResult {
   const { cfg } = x;
   if (cfg.kill_switch) return { ok: false, reason: "kill switch is on" };
-  if (cfg.mode !== "paper") return { ok: false, reason: `mode is '${cfg.mode}', not 'paper'` };
+  // Paper keeps trading while live is armed (mode 'live'); the live desk follows the paper fills.
+  if (cfg.mode !== "paper" && cfg.mode !== "live") return { ok: false, reason: `mode is '${cfg.mode}', not 'paper' or 'live'` };
   if (cfg.night_rule && stockholmHour(x.now) < 7) return { ok: false, reason: "night rule: no new entries 00:00-07:00 Stockholm" };
   if (x.crowding_flag) return { ok: false, reason: `reviewer flagged crowding on the ${x.side} side` };
   if (x.open_real.length >= cfg.max_open) return { ok: false, reason: `max open positions (${cfg.max_open}) reached` };

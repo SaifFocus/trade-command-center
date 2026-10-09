@@ -4,10 +4,12 @@ import { useServerFn } from "@tanstack/react-start";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { runCycleFn, runExecuteFn, setKillSwitchFn } from "@/lib/hl/desk.functions";
+import { LivePanel } from "@/components/desk/LivePanel";
+import { InvoTickets } from "@/components/desk/InvoTickets";
 import type { Database } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/_authenticated/desk")({
-  head: () => ({ meta: [{ title: "APEX — Paper Desk" }, { name: "description", content: "Private paper-trading desk." }] }),
+  head: () => ({ meta: [{ title: "APEX — Desk" }, { name: "description", content: "Private trading desk." }] }),
   component: DeskPage,
 });
 
@@ -117,7 +119,7 @@ function DeskPage() {
     <div className="min-h-screen">
       <header className="panel border-b">
         <div className="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-4">
-          <h1 className="text-neon font-display text-2xl font-black tracking-[0.2em]">APEX · PAPER DESK</h1>
+          <h1 className="text-neon font-display text-2xl font-black tracking-[0.2em]">APEX · DESK</h1>
           <Link to="/" className="text-xs tracking-widest text-muted-foreground hover:text-neon">← DASHBOARD</Link>
         </div>
       </header>
@@ -128,11 +130,13 @@ function DeskPage() {
           <span className="break-all font-mono text-[11px] text-muted-foreground">{status}</span>
         </div>
 
+        <LivePanel usdSek={usdSek} />
+
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <Panel title="CONFIG">
             {cfg ? (
               <div className="space-y-1 text-xs">
-                <div>MODE <span className="text-neon">{cfg.mode.toUpperCase()}</span> · NO REAL ORDERS</div>
+                <div>MODE <span className="text-neon">{cfg.mode.toUpperCase()}</span>{(cfg as { live_armed?: boolean }).live_armed ? " · LIVE ARMED" : " · NO REAL ORDERS"}</div>
                 <div>BUDGET <span className="tabular-nums">{fmt(+cfg.budget_sek, 0)} SEK</span> = <span className="tabular-nums">${usdSek ? fmt(+cfg.budget_sek / usdSek) : "—"}</span> <span className="text-muted-foreground">(USD/SEK {fmt(usdSek, 4)})</span></div>
                 <div>EQUITY <span className="tabular-nums text-neon">${fmt(equity)}</span> = <span className="tabular-nums">{equity && usdSek ? fmt(equity * usdSek) : "—"} SEK</span></div>
                 <div className="text-muted-foreground">RISK {cfg.risk_pct}% (max {cfg.max_risk_pct}%) · MAX OPEN {cfg.max_open} · MIN ORDER ${cfg.min_order_usd} · FEE {cfg.fee_pct}% · SLIP {cfg.slip_pct}%</div>
@@ -193,7 +197,9 @@ function DeskPage() {
           )}
         </Panel>
 
-        <Panel title="OPEN POSITIONS"><PosTable rows={[...openReal, ...openShadow]} live /></Panel>
+        <InvoTickets usdSek={usdSek} />
+
+        <Panel title="OPEN POSITIONS (PAPER)"><PosTable rows={[...openReal, ...openShadow]} live /></Panel>
         <Panel title="CLOSED TRADES"><PosTable rows={closed} live={false} /></Panel>
 
         <Panel title="APPROVED vs VETOED (SHADOW)">

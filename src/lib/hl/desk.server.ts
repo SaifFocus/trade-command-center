@@ -216,7 +216,7 @@ export async function runExecute(db: DB) {
   }
   const cfg = toCfg(cfgRow);
   const now = new Date();
-  const out = { expired: 0, shadow: [] as string[], executed: [] as string[], rejected: [] as string[] };
+  const out = { expired: 0, shadow: [] as string[], executed: [] as string[], rejected: [] as string[], live: [] as string[] };
 
   const cutoff = new Date(now.getTime() - cfgRow.review_window_minutes * 60_000).toISOString();
   const { data: exp } = await db.from("signals").update({ status: "expired" }).eq("status", "new").lt("created_at", cutoff).select("coin,setup");
@@ -263,23 +263,30 @@ export async function runExecute(db: DB) {
       await log(db, `RISK REJECTED ${s.coin} ${s.setup}: ${res.reason}`, "WARN");
       continue;
     }
-    await insertPosition(db, s, res, false, now, cfg);
+    const paperId = await insertPosition(db, s, res, false, now, cfg);
     await db.from("signals").update({ status: "executed" }).eq("id", s.id);
     open_real.push({ margin_usd: res.margin_usd });
     out.executed.push(s.coin);
+    // Live desk: real orders follow every paper fill while live mode is armed (see src/lib/live).
+    if ((cfgRow as { live_armed?: boolean }).live_armed && !cfg.kill_switch) {
+      const { executeLive } = await import("@/lib/live/live.server");
+      const lr = await executeLive(db, s, { paperPositionId: paperId });
+      out.live.push(`${s.coin}: ${lr.status} — ${lr.note}`);
+    }
     await log(db, `PAPER FILL ${s.coin} ${s.side.toUpperCase()} ${s.setup} @ ${res.entry.toPrecision(6)} · $${res.notional_usd.toFixed(2)} notional · risk $${res.risk_usd.toFixed(2)} · ${res.leverage}x cap`, "TRADE");
   }
   await snapshot(db, { ...cfgRow, kill_switch: cfg.kill_switch }, "execute");
-  await log(db, `Execute done · ${out.expired} expired · ${out.shadow.length} shadow · ${out.executed.length} filled · ${out.rejected.length} rejected`);
+  await log(db, `Execute done · ${out.expired} expired · ${out.shadow.length} shadow · ${out.executed.length} filled · ${out.rejected.length} rejected · ${out.live.length} live`);
   return out;
 }
 
-async function insertPosition(db: DB, s: any, z: ReturnType<typeof sizePosition> & { ok: true }, shadow: boolean, now: Date, cfg: DeskCfg) {
-  const { error } = await db.from("paper_positions").insert({
+async function insertPosition(db: DB, s: any, z: ReturnType<typeof sizePosition> & { ok: true }, shadow: boolean, now: Date, cfg: DeskCfg): Promise<string> {
+  const { data, error } = await db.from("paper_positions").insert({
     signal_id: s.id, shadow, coin: s.coin, side: s.side, setup: s.setup, entry_t: now.toISOString(), entry_px: z.entry,
     init_stop_px: +s.stop_px, stop_px: +s.stop_px, t1_px: z.t1, t2_px: z.t2, size_coin: z.size_coin, notional_usd: z.notional_usd,
     margin_usd: z.margin_usd, leverage: z.leverage, risk_usd: z.risk_usd, fees_usd: (z.notional_usd * cfg.fee_pct) / 100,
     follow_wallets: s.setup === "smart_money_follow" ? ((s.context?.wallets ?? []) as { address: string }[]).map((w) => w.address) : null,
-  });
-  if (error) throw new Error(`paper_positions insert: ${error.message}`);
+  }).select("id").single();
+  if (error || !data) throw new Error(`paper_positions insert: ${error?.message ?? "no row returned"}`);
+  return data.id;
 }
