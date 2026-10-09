@@ -1096,6 +1096,15 @@ export type Database = {
           originated: number
         }[]
       }
+      sm_invo_agg2: {
+        Args: { p_min: number; p_since: string }
+        Returns: {
+          address: string
+          fills: number
+          opens: number
+          originated: number
+        }[]
+      }
       sm_latest_t: { Args: { p_coin: string }; Returns: Json }
       submit_review: {
         Args: {

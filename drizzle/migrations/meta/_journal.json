@@ -43,6 +43,13 @@
       "when": 1791560899289,
       "tag": "0005_sm_coin_hourly",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791560952797,
+      "tag": "0006_sm_invo_agg_min",
+      "breakpoints": true
     }
   ]
 }
