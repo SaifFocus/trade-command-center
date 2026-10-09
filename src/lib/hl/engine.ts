@@ -72,7 +72,7 @@ function percentile(vals: number[], p: number) {
   return s[lo] + (s[hi] - s[lo]) * (idx - lo);
 }
 
-type Prep = {
+export type Prep = {
   coin: string; c4h: Bar[]; idx: Map<number, number>; d: Daily;
   ema20: (number | null)[]; ema50: (number | null)[]; atr4: (number | null)[];
   fund4: number[]; fund24: (number | null)[];
@@ -80,7 +80,7 @@ type Prep = {
   levelsShort: { level: number; from: number; to: number; used: boolean }[];
 };
 
-function prep(cd: CoinData): Prep {
+export function prep(cd: CoinData): Prep {
   const c4h = cd.c4h;
   const d = dailyInd(cd.c1d);
   const closes = c4h.map((b) => b.c);
@@ -107,9 +107,9 @@ function prep(cd: CoinData): Prep {
   };
 }
 
-type Signal = { coin: string; setup: Setup; side: "long" | "short"; stop: number };
+export type Signal = { coin: string; setup: Setup; side: "long" | "short"; stop: number };
 
-function signalsAt(p: Prep, i: number, riskOn: boolean | null): Signal | null {
+export function signalsAt(p: Prep, i: number, riskOn: boolean | null): Signal | null {
   const b = p.c4h[i];
   const T = b.t + H4;
   const dd = lastClosedDay(p.d.bars, T);
@@ -165,10 +165,54 @@ function signalsAt(p: Prep, i: number, riskOn: boolean | null): Signal | null {
   return cands[0] ?? null;
 }
 
-type Pos = {
-  sig: Signal; coin: string; entryIdx: number; entry: number; stop: number; R: number; t1: number; t2: number;
-  dir: 1 | -1; t1hit: boolean; remaining: number; gross: number; fee: number; funding: number; bars: number; entry_t: number;
+/** Regime for a 4H bar opening at T: risk-on when BTC's last closed daily close > daily EMA200. */
+export function regimeAt(btc: Prep, T: number): boolean | null {
+  const d = lastClosedDay(btc.d.bars, T + H4);
+  const e = d >= 0 ? btc.d.ema200[d] : null;
+  return e == null ? null : btc.d.bars[d].c > e;
+}
+
+/** Position state in R units (R = |entry - initial stop|). Shared by backtest and paper desk. */
+export type PosState = {
+  entry: number; stop: number; R: number; t1: number; t2: number; dir: 1 | -1;
+  t1hit: boolean; remaining: number; gross: number; fee: number; funding: number; bars: number;
 };
+
+export function closeFrac(p: PosState, frac: number, px: number, costRate: number) {
+  p.gross += (frac * (px - p.entry) * p.dir) / p.R;
+  p.fee += (costRate * px * frac) / p.R;
+  p.remaining -= frac;
+}
+
+/** Manage a position over one closed 4H bar. Mutates p. Returns the final exit or null if still open. */
+export function stepPosition(p: PosState, b: Bar, fund4: number, costRate: number): { px: number; reason: string } | null {
+  const exit = (px: number, reason: string) => { closeFrac(p, p.remaining, px, costRate); return { px, reason }; };
+  p.bars++;
+  p.funding += (p.dir * fund4 * p.entry * p.remaining) / p.R;
+  const hitStop = p.dir === 1 ? b.l <= p.stop : b.h >= p.stop;
+  if (!p.t1hit) {
+    if (hitStop) return exit(p.stop, "stop");
+    const hitT1 = p.dir === 1 ? b.h >= p.t1 : b.l <= p.t1;
+    if (hitT1) {
+      closeFrac(p, 0.5, p.t1, costRate);
+      p.t1hit = true;
+      p.stop = p.entry;
+      const beHit = p.dir === 1 ? b.l <= p.entry : b.h >= p.entry;
+      if (beHit) return exit(p.entry, "breakeven");
+      const hitT2 = p.dir === 1 ? b.h >= p.t2 : b.l <= p.t2;
+      if (hitT2) return exit(p.t2, "t2");
+    }
+  } else {
+    if (hitStop) return exit(p.stop, "breakeven");
+    const hitT2 = p.dir === 1 ? b.h >= p.t2 : b.l <= p.t2;
+    if (hitT2) return exit(p.t2, "t2");
+  }
+  if (!p.t1hit && p.bars >= 42) return exit(b.c, "time_stop");
+  if (p.bars >= 84) return exit(b.c, "max_hold");
+  return null;
+}
+
+type Pos = PosState & { sig: Signal; coin: string; entryIdx: number; entry_t: number };
 
 export function runBacktest(coins: CoinData[], params: Params, btcCoin = "BTC") {
   const preps = new Map(coins.filter((c) => c.c4h.length && c.c1d.length).map((c) => [c.coin, prep(c)]));
@@ -184,13 +228,8 @@ export function runBacktest(coins: CoinData[], params: Params, btcCoin = "BTC") 
   let pending: Signal[] = [];
   const trades: BtTrade[] = [];
 
-  const close = (p: Pos, frac: number, px: number) => {
-    p.gross += (frac * (px - p.entry) * p.dir) / p.R;
-    p.fee += (costRate * px * frac) / p.R;
-    p.remaining -= frac;
-  };
-  const finish = (p: Pos, t: number, px: number, reason: string) => {
-    close(p, p.remaining, px);
+  const finish = (p: Pos, t: number, px: number, reason: string, closed = false) => {
+    if (!closed) closeFrac(p, p.remaining, px, costRate);
     const net = p.gross - p.fee - p.funding;
     trades.push({
       coin: p.coin, setup: p.sig.setup, side: p.sig.side, sample: p.entry_t < splitT ? "in" : "out",
@@ -226,35 +265,12 @@ export function runBacktest(coins: CoinData[], params: Params, btcCoin = "BTC") 
       const p = preps.get(pos.coin)!;
       const i = p.idx.get(T);
       if (i == null) continue;
-      const b = p.c4h[i];
-      pos.bars++;
-      pos.funding += (pos.dir * p.fund4[i] * pos.entry * pos.remaining) / pos.R;
-      const hitStop = pos.dir === 1 ? b.l <= pos.stop : b.h >= pos.stop;
-      if (!pos.t1hit) {
-        if (hitStop) { finish(pos, T, pos.stop, "stop"); continue; }
-        const hitT1 = pos.dir === 1 ? b.h >= pos.t1 : b.l <= pos.t1;
-        if (hitT1) {
-          close(pos, 0.5, pos.t1);
-          pos.t1hit = true;
-          pos.stop = pos.entry;
-          const beHit = pos.dir === 1 ? b.l <= pos.entry : b.h >= pos.entry;
-          if (beHit) { finish(pos, T, pos.entry, "breakeven"); continue; }
-          const hitT2 = pos.dir === 1 ? b.h >= pos.t2 : b.l <= pos.t2;
-          if (hitT2) { finish(pos, T, pos.t2, "t2"); continue; }
-        }
-      } else {
-        if (hitStop) { finish(pos, T, pos.stop, "breakeven"); continue; }
-        const hitT2 = pos.dir === 1 ? b.h >= pos.t2 : b.l <= pos.t2;
-        if (hitT2) { finish(pos, T, pos.t2, "t2"); continue; }
-      }
-      if (!pos.t1hit && pos.bars >= 42) { finish(pos, T, b.c, "time_stop"); continue; }
-      if (pos.bars >= 84) { finish(pos, T, b.c, "max_hold"); continue; }
+      const ex = stepPosition(pos, p.c4h[i], p.fund4[i], costRate);
+      if (ex) finish(pos, T, ex.px, ex.reason, true);
     }
 
     // 3) signals at this bar's close (entries next bar)
-    const btcDay = lastClosedDay(btc.d.bars, T + H4);
-    const be200 = btcDay >= 0 ? btc.d.ema200[btcDay] : null;
-    const riskOn = be200 == null ? null : btc.d.bars[btcDay].c > be200;
+    const riskOn = regimeAt(btc, T);
     for (const coin of coinNames) {
       if (open.size + pending.length >= 4) break;
       if (open.has(coin)) continue;
