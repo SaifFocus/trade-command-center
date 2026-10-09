@@ -430,6 +430,7 @@ export type Database = {
           exit_reason: string | null
           exit_t: string | null
           fees_usd: number
+          follow_wallets: string[] | null
           funding_usd: number
           gross_usd: number
           id: string
@@ -462,6 +463,7 @@ export type Database = {
           exit_reason?: string | null
           exit_t?: string | null
           fees_usd?: number
+          follow_wallets?: string[] | null
           funding_usd?: number
           gross_usd?: number
           id?: string
@@ -494,6 +496,7 @@ export type Database = {
           exit_reason?: string | null
           exit_t?: string | null
           fees_usd?: number
+          follow_wallets?: string[] | null
           funding_usd?: number
           gross_usd?: number
           id?: string
@@ -542,6 +545,27 @@ export type Database = {
           id?: number
           snapshot_at?: string | null
           total_sek?: number
+        }
+        Relationships: []
+      }
+      rate_budget: {
+        Row: {
+          cap: number
+          id: number
+          used: number
+          window_start: string
+        }
+        Insert: {
+          cap?: number
+          id?: number
+          used?: number
+          window_start?: string
+        }
+        Update: {
+          cap?: number
+          id?: number
+          used?: number
+          window_start?: string
         }
         Relationships: []
       }
@@ -602,6 +626,393 @@ export type Database = {
           stop_px?: number
           t1_px?: number
           t2_px?: number
+        }
+        Relationships: []
+      }
+      sm_events: {
+        Row: {
+          address: string
+          coin: string
+          entry_px: number | null
+          id: number
+          kind: string
+          leverage: number | null
+          notional_frac: number | null
+          processed: boolean
+          side: string
+          size: number | null
+          t: string
+        }
+        Insert: {
+          address: string
+          coin: string
+          entry_px?: number | null
+          id?: number
+          kind: string
+          leverage?: number | null
+          notional_frac?: number | null
+          processed?: boolean
+          side: string
+          size?: number | null
+          t?: string
+        }
+        Update: {
+          address?: string
+          coin?: string
+          entry_px?: number | null
+          id?: number
+          kind?: string
+          leverage?: number | null
+          notional_frac?: number | null
+          processed?: boolean
+          side?: string
+          size?: number | null
+          t?: string
+        }
+        Relationships: []
+      }
+      sm_invo_daily: {
+        Row: {
+          address: string
+          day: string
+          fills: number
+          opens: number
+          originated: number
+        }
+        Insert: {
+          address: string
+          day: string
+          fills?: number
+          opens?: number
+          originated?: number
+        }
+        Update: {
+          address?: string
+          day?: string
+          fills?: number
+          opens?: number
+          originated?: number
+        }
+        Relationships: []
+      }
+      sm_invo_days: {
+        Row: {
+          day: string
+          ingested_at: string
+          rows: number
+          status: string
+        }
+        Insert: {
+          day: string
+          ingested_at?: string
+          rows: number
+          status: string
+        }
+        Update: {
+          day?: string
+          ingested_at?: string
+          rows?: number
+          status?: string
+        }
+        Relationships: []
+      }
+      sm_jobs: {
+        Row: {
+          name: string
+          state: Json
+          updated_at: string
+        }
+        Insert: {
+          name: string
+          state?: Json
+          updated_at?: string
+        }
+        Update: {
+          name?: string
+          state?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sm_positions: {
+        Row: {
+          account_value: number | null
+          address: string
+          coin: string
+          entry_px: number | null
+          leverage: number | null
+          notional: number | null
+          opened_at: string
+          side: string
+          szi: number
+          updated_at: string
+        }
+        Insert: {
+          account_value?: number | null
+          address: string
+          coin: string
+          entry_px?: number | null
+          leverage?: number | null
+          notional?: number | null
+          opened_at?: string
+          side: string
+          szi: number
+          updated_at?: string
+        }
+        Update: {
+          account_value?: number | null
+          address?: string
+          coin?: string
+          entry_px?: number | null
+          leverage?: number | null
+          notional?: number | null
+          opened_at?: string
+          side?: string
+          szi?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sm_scores: {
+        Row: {
+          address: string
+          base: number | null
+          cap: number | null
+          components: Json | null
+          computed_at: string
+          eligible: boolean
+          fast: boolean
+          filters: Json | null
+          score: number
+          tier: string | null
+          watchlist: boolean
+        }
+        Insert: {
+          address: string
+          base?: number | null
+          cap?: number | null
+          components?: Json | null
+          computed_at?: string
+          eligible?: boolean
+          fast?: boolean
+          filters?: Json | null
+          score: number
+          tier?: string | null
+          watchlist?: boolean
+        }
+        Update: {
+          address?: string
+          base?: number | null
+          cap?: number | null
+          components?: Json | null
+          computed_at?: string
+          eligible?: boolean
+          fast?: boolean
+          filters?: Json | null
+          score?: number
+          tier?: string | null
+          watchlist?: boolean
+        }
+        Relationships: []
+      }
+      sm_trades: {
+        Row: {
+          address: string
+          coin: string
+          entry_px: number | null
+          entry_t: string
+          exit_px: number | null
+          exit_t: string
+          fees: number | null
+          hold_h: number | null
+          id: number
+          liquidated: boolean
+          max_notional: number | null
+          net_pnl: number
+          side: string
+        }
+        Insert: {
+          address: string
+          coin: string
+          entry_px?: number | null
+          entry_t: string
+          exit_px?: number | null
+          exit_t: string
+          fees?: number | null
+          hold_h?: number | null
+          id?: number
+          liquidated?: boolean
+          max_notional?: number | null
+          net_pnl: number
+          side: string
+        }
+        Update: {
+          address?: string
+          coin?: string
+          entry_px?: number | null
+          entry_t?: string
+          exit_px?: number | null
+          exit_t?: string
+          fees?: number | null
+          hold_h?: number | null
+          id?: number
+          liquidated?: boolean
+          max_notional?: number | null
+          net_pnl?: number
+          side?: string
+        }
+        Relationships: []
+      }
+      sm_wallet_stats: {
+        Row: {
+          account_value: number | null
+          active_weeks: number | null
+          address: string
+          age_days: number | null
+          avg_lev: number | null
+          computed_at: string
+          expectancy: number | null
+          last_trade_at: string | null
+          lifetime_pnl: number | null
+          liquid_share: number | null
+          liquidations: number | null
+          max_lev: number | null
+          mdd_180: number | null
+          mdd_30: number | null
+          mdd_90: number | null
+          median_hold_h: number | null
+          metrics: Json | null
+          p25_hold_h: number | null
+          portfolio: Json | null
+          profit_factor: number | null
+          ret_180: number | null
+          ret_30: number | null
+          ret_90: number | null
+          top1_share: number | null
+          top4_share: number | null
+          trades: number | null
+          win_loss: number | null
+          win_rate: number | null
+          wweeks_180: number | null
+          wweeks_30: number | null
+          wweeks_90: number | null
+        }
+        Insert: {
+          account_value?: number | null
+          active_weeks?: number | null
+          address: string
+          age_days?: number | null
+          avg_lev?: number | null
+          computed_at?: string
+          expectancy?: number | null
+          last_trade_at?: string | null
+          lifetime_pnl?: number | null
+          liquid_share?: number | null
+          liquidations?: number | null
+          max_lev?: number | null
+          mdd_180?: number | null
+          mdd_30?: number | null
+          mdd_90?: number | null
+          median_hold_h?: number | null
+          metrics?: Json | null
+          p25_hold_h?: number | null
+          portfolio?: Json | null
+          profit_factor?: number | null
+          ret_180?: number | null
+          ret_30?: number | null
+          ret_90?: number | null
+          top1_share?: number | null
+          top4_share?: number | null
+          trades?: number | null
+          win_loss?: number | null
+          win_rate?: number | null
+          wweeks_180?: number | null
+          wweeks_30?: number | null
+          wweeks_90?: number | null
+        }
+        Update: {
+          account_value?: number | null
+          active_weeks?: number | null
+          address?: string
+          age_days?: number | null
+          avg_lev?: number | null
+          computed_at?: string
+          expectancy?: number | null
+          last_trade_at?: string | null
+          lifetime_pnl?: number | null
+          liquid_share?: number | null
+          liquidations?: number | null
+          max_lev?: number | null
+          mdd_180?: number | null
+          mdd_30?: number | null
+          mdd_90?: number | null
+          median_hold_h?: number | null
+          metrics?: Json | null
+          p25_hold_h?: number | null
+          portfolio?: Json | null
+          profit_factor?: number | null
+          ret_180?: number | null
+          ret_30?: number | null
+          ret_90?: number | null
+          top1_share?: number | null
+          top4_share?: number | null
+          trades?: number | null
+          win_loss?: number | null
+          win_rate?: number | null
+          wweeks_180?: number | null
+          wweeks_30?: number | null
+          wweeks_90?: number | null
+        }
+        Relationships: []
+      }
+      sm_wallets: {
+        Row: {
+          account_value: number | null
+          address: string
+          display_name: string | null
+          error: string | null
+          first_seen: string
+          invo_fills_60d: number
+          invo_opens_60d: number
+          invo_originator_share: number | null
+          last_deep_dive_at: string | null
+          lb_alltime_pnl: number | null
+          lb_month_vlm: number | null
+          next_due_at: string
+          sources: string[]
+          status: string
+        }
+        Insert: {
+          account_value?: number | null
+          address: string
+          display_name?: string | null
+          error?: string | null
+          first_seen?: string
+          invo_fills_60d?: number
+          invo_opens_60d?: number
+          invo_originator_share?: number | null
+          last_deep_dive_at?: string | null
+          lb_alltime_pnl?: number | null
+          lb_month_vlm?: number | null
+          next_due_at?: string
+          sources?: string[]
+          status?: string
+        }
+        Update: {
+          account_value?: number | null
+          address?: string
+          display_name?: string | null
+          error?: string | null
+          first_seen?: string
+          invo_fills_60d?: number
+          invo_opens_60d?: number
+          invo_originator_share?: number | null
+          last_deep_dive_at?: string | null
+          lb_alltime_pnl?: number | null
+          lb_month_vlm?: number | null
+          next_due_at?: string
+          sources?: string[]
+          status?: string
         }
         Relationships: []
       }
@@ -675,6 +1086,26 @@ export type Database = {
       hl_backtest_data: { Args: { p_coin: string }; Returns: Json }
       hl_latest_t: { Args: { p_coin: string }; Returns: Json }
       is_owner: { Args: never; Returns: boolean }
+      sm_coin_hourly: { Args: { p_coin: string }; Returns: Json }
+      sm_invo_agg: {
+        Args: { p_since: string }
+        Returns: {
+          address: string
+          fills: number
+          opens: number
+          originated: number
+        }[]
+      }
+      sm_invo_agg2: {
+        Args: { p_min: number; p_since: string }
+        Returns: {
+          address: string
+          fills: number
+          opens: number
+          originated: number
+        }[]
+      }
+      sm_latest_t: { Args: { p_coin: string }; Returns: Json }
       submit_review: {
         Args: {
           p_confidence: number
@@ -709,6 +1140,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      take_weight: { Args: { p: number }; Returns: number }
       verify_cron_secret: { Args: { p_token: string }; Returns: boolean }
     }
     Enums: {
