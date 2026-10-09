@@ -5,7 +5,7 @@ ALTER TABLE public.sm_scores ADD COLUMN IF NOT EXISTS tracked_at timestamptz;
 UPDATE public.desk_config SET enabled_setups = array_append(enabled_setups, 'practice_follow')
 WHERE id = 1 AND NOT ('practice_follow' = ANY(enabled_setups));
 
--- Grading queue: watched wallets first (daily re-grade), then Invo traders (originators before copiers, most active first),
+-- Grading queue: watched wallets first (daily re-grade), then Invo traders (swing-paced first, originators before copiers),
 -- then the Hyperliquid leaderboard, which is mostly high-frequency bots.
 CREATE OR REPLACE FUNCTION public.sm_due_wallets(p_limit integer)
 RETURNS TABLE(address text, first_seen timestamp with time zone)
@@ -19,8 +19,9 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public' AS $function$
   WHERE 'leaderboard' = ANY(d.sources) OR d.invo_ok
   ORDER BY EXISTS (SELECT 1 FROM public.sm_scores s WHERE s.address = d.address AND s.watchlist) DESC,
            d.invo_ok DESC,
-           (coalesce(d.invo_originator_share, 0) >= 0.5) DESC,
-           coalesce(d.invo_opens_60d, 0) DESC,
+           -- swing-paced traders (10-59 opens in 60 days) before the very active ones, who are almost all scalpers
+           CASE WHEN coalesce(d.invo_opens_60d, 0) < 60 THEN 0 WHEN d.invo_opens_60d < 120 THEN 1 WHEN d.invo_opens_60d < 300 THEN 2 ELSE 3 END,
+           coalesce(d.invo_originator_share, 0) DESC,
            d.next_due_at
   LIMIT greatest(1, least(p_limit, 100));
 $function$;
