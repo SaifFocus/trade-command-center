@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { hlInfo } from "./hl-api.server";
+import { baseCoins } from "./universe";
 
 type DB = SupabaseClient<Database>;
 
@@ -20,7 +21,7 @@ async function upsert(db: DB, table: "hl_candles" | "hl_funding" | "hl_universe"
   }
 }
 
-/** Snapshot the universe; returns the coin list (top 20 by volume + always-on coins). */
+/** Snapshot the universe; returns the base coin list (top 20 by volume + always-on coins). */
 export async function syncUniverse(db: DB): Promise<string[]> {
   const [meta, ctxs] = await hlInfo<[Meta, Ctx[]]>({ type: "metaAndAssetCtxs" });
   const snapshot_at = new Date().toISOString();
@@ -37,9 +38,7 @@ export async function syncUniverse(db: DB): Promise<string[]> {
       snapshot_at,
     }));
   await upsert(db, "hl_universe", rows, "coin,snapshot_at");
-  const top = [...rows].sort((a, b) => b.day_ntl_vlm - a.day_ntl_vlm).slice(0, 20).map((r) => r.coin);
-  const listed = new Set(rows.map((r) => r.coin));
-  return Array.from(new Set([...top, ...ALWAYS_COINS.filter((c) => listed.has(c))]));
+  return baseCoins(rows, ALWAYS_COINS);
 }
 
 export type CoinSyncResult = { coin: string; candles4h: number; candles1d: number; funding: number };
@@ -84,9 +83,73 @@ export async function syncCoin(db: DB, coin: string): Promise<CoinSyncResult> {
   return out;
 }
 
-export async function syncAll(db: DB) {
-  const coins = await syncUniverse(db);
+/** Base coins plus validated extra coins (desk_config.paper_extra_coins), incremental. */
+export async function syncAll(db: DB, extras: string[] = []) {
+  const coins = Array.from(new Set([...(await syncUniverse(db)), ...extras]));
   const results: CoinSyncResult[] = [];
   for (const c of coins) results.push(await syncCoin(db, c));
   return { coins, results };
+}
+
+const H1 = 3600_000;
+const D1 = INTERVAL_MS["1d"];
+
+async function earliestT(db: DB, table: "hl_candles" | "hl_funding", coin: string, interval?: string): Promise<number | null> {
+  const { data, error } = table === "hl_candles"
+    ? await db.from("hl_candles").select("t").eq("coin", coin).eq("interval", interval ?? "4h").order("t", { ascending: true }).limit(1)
+    : await db.from("hl_funding").select("t").eq("coin", coin).order("t", { ascending: true }).limit(1);
+  if (error) throw new Error(`${table} earliest ${coin}: ${error.message}`);
+  return data?.[0]?.t ? Date.parse(data[0].t) : null;
+}
+
+async function fetchCandles(db: DB, coin: string, interval: "4h" | "1d", startTime: number, endTime: number): Promise<number> {
+  const ms = INTERVAL_MS[interval];
+  const now = Date.now();
+  const batch = await hlInfo<Candle[]>({ type: "candleSnapshot", req: { coin, interval, startTime, endTime } });
+  const rows = batch.filter((k) => k.t + ms <= now)
+    .map((k) => ({ coin, interval, t: new Date(k.t).toISOString(), o: +k.o, h: +k.h, l: +k.l, c: +k.c, v: +k.v }));
+  await upsert(db, "hl_candles", rows, "coin,interval,t");
+  return rows.length;
+}
+
+async function fetchFunding(db: DB, coin: string, startTime: number, endTime: number): Promise<number> {
+  const batch = await hlInfo<Funding[]>({ type: "fundingHistory", coin, startTime, endTime });
+  await upsert(db, "hl_funding", batch.map((f) => ({ coin, t: new Date(f.time).toISOString(), rate: +f.fundingRate, premium: +f.premium })), "coin,t");
+  return batch.length;
+}
+
+/**
+ * Full history for a coin the desk has not tracked before: 4h back ~833 days, daily back to listing, funding back to the
+ * first 4h bar. Funding is filled backwards from the earliest stored row, so a call cut short by the deadline leaves no gap
+ * and the next call carries on. Ends with the normal forward sync.
+ */
+export async function backfillCoin(db: DB, coin: string, deadline: number) {
+  const out = { coin, done: false, c4h: 0, c1d: 0, funding: 0 };
+  const now = Date.now();
+  let e4 = await earliestT(db, "hl_candles", coin, "4h");
+  if (e4 == null) {
+    out.c4h += await fetchCandles(db, coin, "4h", now - MAX_CANDLES * INTERVAL_MS["4h"], now);
+    e4 = await earliestT(db, "hl_candles", coin, "4h");
+    if (e4 == null) return { ...out, done: true };
+  }
+  const e1 = await earliestT(db, "hl_candles", coin, "1d");
+  if (e1 == null || e1 > e4 + D1) out.c1d += await fetchCandles(db, coin, "1d", now - MAX_CANDLES * D1, e1 ?? now);
+
+  let f = await earliestT(db, "hl_funding", coin);
+  if (f == null) {
+    out.funding += await fetchFunding(db, coin, now - 500 * H1, now);
+    f = await earliestT(db, "hl_funding", coin);
+  }
+  let fundingDone = f == null || f <= e4 + 8 * H1;
+  while (!fundingDone && Date.now() < deadline) {
+    const n = await fetchFunding(db, coin, f! - 500 * H1, f! - 1);
+    out.funding += n;
+    const next = await earliestT(db, "hl_funding", coin);
+    if (!n || next == null || next >= f!) fundingDone = true; // nothing older exists
+    else { f = next; fundingDone = f <= e4 + 8 * H1; }
+  }
+  if (!fundingDone) return out;
+  const fwd = await syncCoin(db, coin);
+  out.c4h += fwd.candles4h; out.c1d += fwd.candles1d; out.funding += fwd.funding;
+  return { ...out, done: true };
 }

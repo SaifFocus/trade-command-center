@@ -4,7 +4,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { prep, signalsAt, regimeAt, stepPosition, lastClosedDay, type CoinData, type PosState } from "./engine";
 import { loadCoinData } from "./backtest.server";
-import { syncAll } from "./sync.server";
+import { syncAll, ALWAYS_COINS } from "./sync.server";
+import { deskCoins } from "./universe";
 import { hlInfo } from "./hl-api.server";
 import { evaluateEntry, sizePosition, equityUsd, type DeskCfg } from "./risk";
 
@@ -118,8 +119,13 @@ async function generateSignals(db: DB, coins: CoinData[], cfg: CfgRow) {
     const { data: u } = await db.from("hl_universe").select("*").eq("snapshot_at", snapT[0].snapshot_at);
     for (const r of u ?? []) uni.set(r.coin, r);
   }
+  // Paper universe: top 20 by volume + always-on + validated extras (universe.server.ts). Without a snapshot, every synced coin.
+  const allowed = uni.size
+    ? new Set(deskCoins(Array.from(uni.values()).map((r) => ({ coin: r.coin, day_ntl_vlm: Number(r.day_ntl_vlm ?? 0) })), ALWAYS_COINS, cfg.paper_extra_coins ?? []))
+    : null;
   const created: string[] = [];
   for (const coin of Array.from(preps.keys()).sort()) {
+    if (allowed && !allowed.has(coin)) continue;
     const p = preps.get(coin)!;
     const n = p.c4h.length;
     if (p.c4h[n - 1].t !== latestBarT || blocked.has(coin)) continue;
@@ -189,11 +195,12 @@ async function snapshot(db: DB, cfgRow: CfgRow, note: string) {
 
 export async function runCycle(db: DB) {
   const out: Record<string, unknown> = {};
+  const extras = (await getCfg(db)).paper_extra_coins ?? [];
   try {
     const { data: last } = await db.from("hl_universe").select("snapshot_at").order("snapshot_at", { ascending: false }).limit(1);
     const lastT = last?.[0]?.snapshot_at ? Date.parse(last[0].snapshot_at) : 0;
     if (Date.now() - lastT < 30 * 60_000) out.sync = "skipped (synced < 30 min ago)";
-    else out.sync = `${(await syncAll(db)).coins.length} coins`;
+    else out.sync = `${(await syncAll(db, extras)).coins.length} coins`;
   } catch (e) {
     out.sync = `error: ${e instanceof Error ? e.message : e}`;
     await log(db, `Market sync failed: ${out.sync}`, "ERROR");
@@ -237,7 +244,7 @@ export async function runExecute(db: DB) {
     if (!(mark > 0)) continue;
     const z = sizePosition(cfg, s.coin, s.side as "long" | "short", mark, +s.stop_px, equity, 0);
     if (!z.ok) { await log(db, `[SHADOW] ${s.coin} ${s.setup} not opened: ${z.reason}`, "WARN"); continue; }
-    await insertPosition(db, s, z, true, now, cfg);
+    await insertPosition(db, s, z, true, now, cfg, "vetoed");
     out.shadow.push(s.coin);
     await log(db, `[SHADOW] ${s.coin} ${s.side.toUpperCase()} ${s.setup} opened @ ${z.entry.toPrecision(6)} (vetoed, tracked for comparison)`);
   }
@@ -261,9 +268,17 @@ export async function runExecute(db: DB) {
       if ("kill" in res && res.kill) { await db.from("desk_config").update({ kill_switch: true }).eq("id", 1); cfg.kill_switch = true; }
       out.rejected.push(`${s.coin}: ${res.reason}`);
       await log(db, `RISK REJECTED ${s.coin} ${s.setup}: ${res.reason}`, "WARN");
+      // Track the blocked trade as a shadow too, so every reviewed signal gets an outcome to learn from.
+      if (mark > 0) {
+        const z = sizePosition(cfg, s.coin, s.side as "long" | "short", mark, +s.stop_px, equity, 0);
+        if (z.ok) {
+          await insertPosition(db, s, z, true, now, cfg, "risk");
+          await log(db, `[SHADOW] ${s.coin} ${s.side.toUpperCase()} ${s.setup} opened @ ${z.entry.toPrecision(6)} (blocked by risk rules, tracked for comparison)`);
+        }
+      }
       continue;
     }
-    const paperId = await insertPosition(db, s, res, false, now, cfg);
+    const paperId = await insertPosition(db, s, res, false, now, cfg, null);
     await db.from("signals").update({ status: "executed" }).eq("id", s.id);
     open_real.push({ margin_usd: res.margin_usd });
     out.executed.push(s.coin);
@@ -280,9 +295,12 @@ export async function runExecute(db: DB) {
   return out;
 }
 
-async function insertPosition(db: DB, s: any, z: ReturnType<typeof sizePosition> & { ok: true }, shadow: boolean, now: Date, cfg: DeskCfg): Promise<string> {
+async function insertPosition(
+  db: DB, s: any, z: ReturnType<typeof sizePosition> & { ok: true }, shadow: boolean, now: Date, cfg: DeskCfg,
+  shadowReason: "vetoed" | "risk" | null,
+): Promise<string> {
   const { data, error } = await db.from("paper_positions").insert({
-    signal_id: s.id, shadow, coin: s.coin, side: s.side, setup: s.setup, entry_t: now.toISOString(), entry_px: z.entry,
+    signal_id: s.id, shadow, shadow_reason: shadow ? shadowReason : null, coin: s.coin, side: s.side, setup: s.setup, entry_t: now.toISOString(), entry_px: z.entry,
     init_stop_px: +s.stop_px, stop_px: +s.stop_px, t1_px: z.t1, t2_px: z.t2, size_coin: z.size_coin, notional_usd: z.notional_usd,
     margin_usd: z.margin_usd, leverage: z.leverage, risk_usd: z.risk_usd, fees_usd: (z.notional_usd * cfg.fee_pct) / 100,
     follow_wallets: s.setup === "smart_money_follow" ? ((s.context?.wallets ?? []) as { address: string }[]).map((w) => w.address) : null,

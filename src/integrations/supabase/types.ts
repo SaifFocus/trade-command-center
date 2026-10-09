@@ -200,6 +200,7 @@ export type Database = {
           min_order_usd: number
           mode: string
           night_rule: boolean
+          paper_extra_coins: string[]
           review_window_minutes: number
           risk_pct: number
           slip_pct: number
@@ -221,6 +222,7 @@ export type Database = {
           min_order_usd?: number
           mode?: string
           night_rule?: boolean
+          paper_extra_coins?: string[]
           review_window_minutes?: number
           risk_pct?: number
           slip_pct?: number
@@ -242,6 +244,7 @@ export type Database = {
           min_order_usd?: number
           mode?: string
           night_rule?: boolean
+          paper_extra_coins?: string[]
           review_window_minutes?: number
           risk_pct?: number
           slip_pct?: number
@@ -445,6 +448,7 @@ export type Database = {
           risk_usd: number
           setup: string
           shadow: boolean
+          shadow_reason: string | null
           side: string
           signal_id: string | null
           size_coin: number
@@ -478,6 +482,7 @@ export type Database = {
           risk_usd: number
           setup: string
           shadow?: boolean
+          shadow_reason?: string | null
           side: string
           signal_id?: string | null
           size_coin: number
@@ -511,6 +516,7 @@ export type Database = {
           risk_usd?: number
           setup?: string
           shadow?: boolean
+          shadow_reason?: string | null
           side?: string
           signal_id?: string | null
           size_coin?: number

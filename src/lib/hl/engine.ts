@@ -217,7 +217,8 @@ export function stepPosition(
 
 type Pos = PosState & { sig: Signal; coin: string; entryIdx: number; entry_t: number };
 
-export function runBacktest(coins: CoinData[], params: Params, btcCoin = "BTC") {
+/** `tradeCoins` limits which coins may open trades (all coins still feed the BTC regime and timeline). */
+export function runBacktest(coins: CoinData[], params: Params, btcCoin = "BTC", tradeCoins?: Set<string>) {
   const preps = new Map(coins.filter((c) => c.c4h.length && c.c1d.length).map((c) => [c.coin, prep(c)]));
   const btc = preps.get(btcCoin);
   if (!btc) throw new Error("BTC data missing");
@@ -225,7 +226,7 @@ export function runBacktest(coins: CoinData[], params: Params, btcCoin = "BTC") 
   const startT = times[0], endT = times[times.length - 1] + H4;
   const splitT = startT + 0.6 * (endT - startT);
   const costRate = (params.feePct + params.slipPct) / 100;
-  const coinNames = Array.from(preps.keys()).sort();
+  const coinNames = Array.from(preps.keys()).filter((c) => !tradeCoins || tradeCoins.has(c)).sort();
 
   const open = new Map<string, Pos>();
   let pending: Signal[] = [];

@@ -17,6 +17,7 @@ import { Route as AuthenticatedDeskRouteImport } from './routes/_authenticated/d
 import { Route as AuthenticatedScoutRouteImport } from './routes/_authenticated/scout'
 import { Route as ApiCronDeskCycleRouteImport } from './routes/api/cron/desk-cycle'
 import { Route as ApiCronDeskExecuteRouteImport } from './routes/api/cron/desk-execute'
+import { Route as ApiCronDeskUniverseRouteImport } from './routes/api/cron/desk-universe'
 import { Route as ApiCronHlSyncRouteImport } from './routes/api/cron/hl-sync'
 import { Route as ApiCronLiveReconcileRouteImport } from './routes/api/cron/live-reconcile'
 import { Route as ApiCronSmCopyRouteImport } from './routes/api/cron/sm-copy'
@@ -63,6 +64,11 @@ const ApiCronDeskExecuteRoute = ApiCronDeskExecuteRouteImport.update({
   path: '/api/cron/desk-execute',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronDeskUniverseRoute = ApiCronDeskUniverseRouteImport.update({
+  id: '/api/cron/desk-universe',
+  path: '/api/cron/desk-universe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiCronHlSyncRoute = ApiCronHlSyncRouteImport.update({
   id: '/api/cron/hl-sync',
   path: '/api/cron/hl-sync',
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/scout': typeof AuthenticatedScoutRoute
   '/api/cron/desk-cycle': typeof ApiCronDeskCycleRoute
   '/api/cron/desk-execute': typeof ApiCronDeskExecuteRoute
+  '/api/cron/desk-universe': typeof ApiCronDeskUniverseRoute
   '/api/cron/hl-sync': typeof ApiCronHlSyncRoute
   '/api/cron/live-reconcile': typeof ApiCronLiveReconcileRoute
   '/api/cron/sm-copy': typeof ApiCronSmCopyRoute
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/api/cron/desk-cycle': typeof ApiCronDeskCycleRoute
   '/api/cron/desk-execute': typeof ApiCronDeskExecuteRoute
+  '/api/cron/desk-universe': typeof ApiCronDeskUniverseRoute
   '/api/cron/hl-sync': typeof ApiCronHlSyncRoute
   '/api/cron/live-reconcile': typeof ApiCronLiveReconcileRoute
   '/api/cron/sm-copy': typeof ApiCronSmCopyRoute
@@ -134,6 +142,7 @@ export interface FileRoutesById {
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/api/cron/desk-cycle': typeof ApiCronDeskCycleRoute
   '/api/cron/desk-execute': typeof ApiCronDeskExecuteRoute
+  '/api/cron/desk-universe': typeof ApiCronDeskUniverseRoute
   '/api/cron/hl-sync': typeof ApiCronHlSyncRoute
   '/api/cron/live-reconcile': typeof ApiCronLiveReconcileRoute
   '/api/cron/sm-copy': typeof ApiCronSmCopyRoute
@@ -151,6 +160,7 @@ export interface FileRouteTypes {
     | '/scout'
     | '/api/cron/desk-cycle'
     | '/api/cron/desk-execute'
+    | '/api/cron/desk-universe'
     | '/api/cron/hl-sync'
     | '/api/cron/live-reconcile'
     | '/api/cron/sm-copy'
@@ -166,6 +176,7 @@ export interface FileRouteTypes {
     | '/'
     | '/api/cron/desk-cycle'
     | '/api/cron/desk-execute'
+    | '/api/cron/desk-universe'
     | '/api/cron/hl-sync'
     | '/api/cron/live-reconcile'
     | '/api/cron/sm-copy'
@@ -182,6 +193,7 @@ export interface FileRouteTypes {
     | '/_authenticated/'
     | '/api/cron/desk-cycle'
     | '/api/cron/desk-execute'
+    | '/api/cron/desk-universe'
     | '/api/cron/hl-sync'
     | '/api/cron/live-reconcile'
     | '/api/cron/sm-copy'
@@ -195,6 +207,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ApiCronDeskCycleRoute: typeof ApiCronDeskCycleRoute
   ApiCronDeskExecuteRoute: typeof ApiCronDeskExecuteRoute
+  ApiCronDeskUniverseRoute: typeof ApiCronDeskUniverseRoute
   ApiCronHlSyncRoute: typeof ApiCronHlSyncRoute
   ApiCronLiveReconcileRoute: typeof ApiCronLiveReconcileRoute
   ApiCronSmCopyRoute: typeof ApiCronSmCopyRoute
@@ -259,6 +272,13 @@ declare module '@tanstack/react-router' {
       path: '/api/cron/desk-execute'
       fullPath: '/api/cron/desk-execute'
       preLoaderRoute: typeof ApiCronDeskExecuteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron/desk-universe': {
+      id: '/api/cron/desk-universe'
+      path: '/api/cron/desk-universe'
+      fullPath: '/api/cron/desk-universe'
+      preLoaderRoute: typeof ApiCronDeskUniverseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/cron/hl-sync': {
@@ -328,6 +348,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ApiCronDeskCycleRoute: ApiCronDeskCycleRoute,
   ApiCronDeskExecuteRoute: ApiCronDeskExecuteRoute,
+  ApiCronDeskUniverseRoute: ApiCronDeskUniverseRoute,
   ApiCronHlSyncRoute: ApiCronHlSyncRoute,
   ApiCronLiveReconcileRoute: ApiCronLiveReconcileRoute,
   ApiCronSmCopyRoute: ApiCronSmCopyRoute,

@@ -29,7 +29,8 @@ export const runBacktestFn = createServerFn({ method: "POST" })
     await assertOwner(context.supabase);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { runAndStore, loadCoinData, CONFIGS } = await import("./backtest.server");
-    const data = await loadCoinData(supabaseAdmin);
+    const { deskUniverse } = await import("./universe.server");
+    const data = await loadCoinData(supabaseAdmin, await deskUniverse(supabaseAdmin));
     const out = [];
     for (const cfg of CONFIGS) out.push(await runAndStore(supabaseAdmin, cfg, data));
     return out.map((r) => r.id);

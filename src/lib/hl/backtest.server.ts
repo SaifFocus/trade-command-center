@@ -17,8 +17,10 @@ async function latestCoins(db: DB): Promise<string[]> {
   return Array.from(new Set((data ?? []).map((r) => r.coin))).sort();
 }
 
-export async function loadCoinData(db: DB): Promise<CoinData[]> {
-  const coins = await latestCoins(db);
+/** Candles and 4h funding per coin; `only` restricts the set (default: every coin with a recent daily candle). */
+export async function loadCoinData(db: DB, only?: string[]): Promise<CoinData[]> {
+  const recent = await latestCoins(db);
+  const coins = only ? recent.filter((c) => only.includes(c)) : recent;
   const out: CoinData[] = [];
   for (const coin of coins) {
     const { data, error } = await db.rpc("hl_backtest_data", { p_coin: coin });
