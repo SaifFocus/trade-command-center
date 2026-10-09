@@ -10,7 +10,9 @@ export const CONFIGS: Params[] = [
 ];
 
 async function latestCoins(db: DB): Promise<string[]> {
-  const { data, error } = await db.from("hl_candles").select("coin").eq("interval", "1d").limit(100000);
+  // Coins with a recent closed daily candle (small result set; avoids the 1000-row API cap).
+  const since = new Date(Date.now() - 5 * 86400_000).toISOString();
+  const { data, error } = await db.from("hl_candles").select("coin").eq("interval", "1d").gte("t", since).limit(1000);
   if (error) throw new Error(error.message);
   return Array.from(new Set((data ?? []).map((r) => r.coin))).sort();
 }
