@@ -9,21 +9,22 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedBacktestRouteImport } from './routes/_authenticated/backtest'
-import { Route as ApiCronHlSyncRouteImport } from './routes/api/cron/hl-sync'
-import { Route as ApiCronDeskExecuteRouteImport } from './routes/api/cron/desk-execute'
+import { Route as AuthenticatedDeskRouteImport } from './routes/_authenticated/desk'
 import { Route as ApiCronDeskCycleRouteImport } from './routes/api/cron/desk-cycle'
+import { Route as ApiCronDeskExecuteRouteImport } from './routes/api/cron/desk-execute'
+import { Route as ApiCronHlSyncRouteImport } from './routes/api/cron/hl-sync'
 
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
@@ -36,9 +37,14 @@ const AuthenticatedBacktestRoute = AuthenticatedBacktestRouteImport.update({
   path: '/backtest',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const ApiCronHlSyncRoute = ApiCronHlSyncRouteImport.update({
-  id: '/api/cron/hl-sync',
-  path: '/api/cron/hl-sync',
+const AuthenticatedDeskRoute = AuthenticatedDeskRouteImport.update({
+  id: '/desk',
+  path: '/desk',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiCronDeskCycleRoute = ApiCronDeskCycleRouteImport.update({
+  id: '/api/cron/desk-cycle',
+  path: '/api/cron/desk-cycle',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCronDeskExecuteRoute = ApiCronDeskExecuteRouteImport.update({
@@ -46,9 +52,9 @@ const ApiCronDeskExecuteRoute = ApiCronDeskExecuteRouteImport.update({
   path: '/api/cron/desk-execute',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiCronDeskCycleRoute = ApiCronDeskCycleRouteImport.update({
-  id: '/api/cron/desk-cycle',
-  path: '/api/cron/desk-cycle',
+const ApiCronHlSyncRoute = ApiCronHlSyncRouteImport.update({
+  id: '/api/cron/hl-sync',
+  path: '/api/cron/hl-sync',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -56,6 +62,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
   '/backtest': typeof AuthenticatedBacktestRoute
+  '/desk': typeof AuthenticatedDeskRoute
   '/api/cron/desk-cycle': typeof ApiCronDeskCycleRoute
   '/api/cron/desk-execute': typeof ApiCronDeskExecuteRoute
   '/api/cron/hl-sync': typeof ApiCronHlSyncRoute
@@ -63,6 +70,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/backtest': typeof AuthenticatedBacktestRoute
+  '/desk': typeof AuthenticatedDeskRoute
   '/': typeof AuthenticatedIndexRoute
   '/api/cron/desk-cycle': typeof ApiCronDeskCycleRoute
   '/api/cron/desk-execute': typeof ApiCronDeskExecuteRoute
@@ -73,6 +81,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/_authenticated/backtest': typeof AuthenticatedBacktestRoute
+  '/_authenticated/desk': typeof AuthenticatedDeskRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/api/cron/desk-cycle': typeof ApiCronDeskCycleRoute
   '/api/cron/desk-execute': typeof ApiCronDeskExecuteRoute
@@ -84,6 +93,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/backtest'
+    | '/desk'
     | '/api/cron/desk-cycle'
     | '/api/cron/desk-execute'
     | '/api/cron/hl-sync'
@@ -91,6 +101,7 @@ export interface FileRouteTypes {
   to:
     | '/login'
     | '/backtest'
+    | '/desk'
     | '/'
     | '/api/cron/desk-cycle'
     | '/api/cron/desk-execute'
@@ -100,6 +111,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/login'
     | '/_authenticated/backtest'
+    | '/_authenticated/desk'
     | '/_authenticated/'
     | '/api/cron/desk-cycle'
     | '/api/cron/desk-execute'
@@ -116,18 +128,18 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_authenticated': {
       id: '/_authenticated'
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/': {
@@ -144,11 +156,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBacktestRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/api/cron/hl-sync': {
-      id: '/api/cron/hl-sync'
-      path: '/api/cron/hl-sync'
-      fullPath: '/api/cron/hl-sync'
-      preLoaderRoute: typeof ApiCronHlSyncRouteImport
+    '/_authenticated/desk': {
+      id: '/_authenticated/desk'
+      path: '/desk'
+      fullPath: '/desk'
+      preLoaderRoute: typeof AuthenticatedDeskRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/cron/desk-cycle': {
+      id: '/api/cron/desk-cycle'
+      path: '/api/cron/desk-cycle'
+      fullPath: '/api/cron/desk-cycle'
+      preLoaderRoute: typeof ApiCronDeskCycleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/cron/desk-execute': {
@@ -158,11 +177,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronDeskExecuteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/cron/desk-cycle': {
-      id: '/api/cron/desk-cycle'
-      path: '/api/cron/desk-cycle'
-      fullPath: '/api/cron/desk-cycle'
-      preLoaderRoute: typeof ApiCronDeskCycleRouteImport
+    '/api/cron/hl-sync': {
+      id: '/api/cron/hl-sync'
+      path: '/api/cron/hl-sync'
+      fullPath: '/api/cron/hl-sync'
+      preLoaderRoute: typeof ApiCronHlSyncRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -170,11 +189,13 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedBacktestRoute: typeof AuthenticatedBacktestRoute
+  AuthenticatedDeskRoute: typeof AuthenticatedDeskRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedBacktestRoute: AuthenticatedBacktestRoute,
+  AuthenticatedDeskRoute: AuthenticatedDeskRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
 
