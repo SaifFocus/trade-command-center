@@ -55,8 +55,25 @@ async function fetchFills(address: string, from: number, to: number): Promise<Fi
   return out;
 }
 
+/** Most recent 2,000 fills in under this window = trades too often to follow on a swing timeframe. */
+const HIGH_FREQ_WINDOW = 20 * DAY;
+
 export async function deepDive(db: DB, address: string, liquid: Set<string>, firstSeen?: number) {
   const now = Date.now();
+  // Fast path first (weight ~120): whales with 10,000+ fills would otherwise cost ~720 weight each and stall the queue.
+  const recent = await hlInfo<Fill[]>({ type: "userFills", user: address, aggregateByTime: true });
+  if (recent.length >= 2000) {
+    const oldest = Math.min(...recent.map((f) => f.time));
+    if (now - oldest < HIGH_FREQ_WINDOW) {
+      const days = Math.round(((now - oldest) / DAY) * 10) / 10;
+      const { error } = await db.from("sm_scores").upsert({
+        address, computed_at: new Date().toISOString(), score: 0, base: null, cap: null, tier: null, eligible: false, fast: true,
+        filters: { high_frequency: false } as any, components: { recent_2000_fills_days: days } as any,
+      });
+      if (error) throw new Error(`sm_scores: ${error.message}`);
+      return { trades: 0, fills: recent.length, score: 0, tier: null, skipped: `high frequency: 2000 fills in ${days} days` };
+    }
+  }
   const raw = await hlInfo<any>({ type: "portfolio", user: address });
   const portfolio = parsePortfolio(raw);
   const fills = await fetchFills(address, now - 180 * DAY, now);
@@ -92,8 +109,8 @@ export async function processQueue(db: DB, budgetMs = 230_000) {
   const liquid = await liquidCoins(db);
   let done = 0, failed = 0;
   while (Date.now() - t0 < budgetMs) {
-    const { data: due } = await db.from("sm_wallets").select("address,first_seen").lte("next_due_at", new Date().toISOString())
-      .order("next_due_at").limit(5);
+    // Priority order and Invo filter live in the sm_due_wallets() SQL function (migration 0008).
+    const { data: due } = await (db.rpc as any)("sm_due_wallets", { p_limit: 5 }) as { data: { address: string; first_seen: string }[] | null };
     if (!due?.length) break;
     for (const w of due) {
       if (Date.now() - t0 > budgetMs) break;
@@ -112,7 +129,7 @@ export async function processQueue(db: DB, budgetMs = 230_000) {
     }
   }
   const wl = await rebuildWatchlist(db);
-  const { count: queue } = await db.from("sm_wallets").select("address", { count: "exact", head: true }).lte("next_due_at", new Date().toISOString());
+  const { data: queue } = await (db.rpc as any)("sm_due_count") as { data: number | null };
   const { count: graded } = await db.from("sm_scores").select("address", { count: "exact", head: true });
   const rate = done / Math.max(1, (Date.now() - t0) / 60_000);
   await setJob(db, "deep_dive", { last_run: new Date().toISOString(), processed: done, failed, queue, graded, watchlist: wl, per_min: Math.round(rate * 10) / 10 });
