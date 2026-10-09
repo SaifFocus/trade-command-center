@@ -9,68 +9,134 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedBacktestRouteImport } from './routes/_authenticated/backtest'
+import { Route as ApiCronHlSyncRouteImport } from './routes/api/cron/hl-sync'
 
-const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
-  id: '/_authenticated/',
-  path: '/',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedBacktestRoute = AuthenticatedBacktestRouteImport.update({
-  id: '/_authenticated/backtest',
+  id: '/backtest',
   path: '/backtest',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiCronHlSyncRoute = ApiCronHlSyncRouteImport.update({
+  id: '/api/cron/hl-sync',
+  path: '/api/cron/hl-sync',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/backtest': typeof AuthenticatedBacktestRoute
   '/': typeof AuthenticatedIndexRoute
+  '/login': typeof LoginRoute
+  '/backtest': typeof AuthenticatedBacktestRoute
+  '/api/cron/hl-sync': typeof ApiCronHlSyncRoute
 }
 export interface FileRoutesByTo {
+  '/login': typeof LoginRoute
   '/backtest': typeof AuthenticatedBacktestRoute
   '/': typeof AuthenticatedIndexRoute
+  '/api/cron/hl-sync': typeof ApiCronHlSyncRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/login': typeof LoginRoute
   '/_authenticated/backtest': typeof AuthenticatedBacktestRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/api/cron/hl-sync': typeof ApiCronHlSyncRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/backtest' | '/'
+  fullPaths: '/' | '/login' | '/backtest' | '/api/cron/hl-sync'
   fileRoutesByTo: FileRoutesByTo
-  to: '/backtest' | '/'
-  id: '__root__' | '/_authenticated/backtest' | '/_authenticated/'
+  to: '/login' | '/backtest' | '/' | '/api/cron/hl-sync'
+  id:
+    | '__root__'
+    | '/_authenticated'
+    | '/login'
+    | '/_authenticated/backtest'
+    | '/_authenticated/'
+    | '/api/cron/hl-sync'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  AuthenticatedBacktestRoute: typeof AuthenticatedBacktestRoute
-  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  ApiCronHlSyncRoute: typeof ApiCronHlSyncRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/': {
       id: '/_authenticated/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/backtest': {
       id: '/_authenticated/backtest'
       path: '/backtest'
       fullPath: '/backtest'
       preLoaderRoute: typeof AuthenticatedBacktestRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/cron/hl-sync': {
+      id: '/api/cron/hl-sync'
+      path: '/api/cron/hl-sync'
+      fullPath: '/api/cron/hl-sync'
+      preLoaderRoute: typeof ApiCronHlSyncRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
 }
 
-const rootRouteChildren: RootRouteChildren = {
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedBacktestRoute: typeof AuthenticatedBacktestRoute
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedBacktestRoute: AuthenticatedBacktestRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
+const rootRouteChildren: RootRouteChildren = {
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  LoginRoute: LoginRoute,
+  ApiCronHlSyncRoute: ApiCronHlSyncRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
