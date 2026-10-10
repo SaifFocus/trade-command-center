@@ -92,6 +92,13 @@
       "when": 1791586800000,
       "tag": "0012_mimic_sim",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791665821672,
+      "tag": "0013_content_rewards",
+      "breakpoints": true
     }
   ]
 }

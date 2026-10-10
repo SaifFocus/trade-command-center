@@ -186,6 +186,349 @@ export type Database = {
           },
         ]
       }
+      cr_accounts: {
+        Row: {
+          created_at: string
+          handle: string
+          id: string
+          linked_in_whop: boolean
+          notes: string | null
+          platform: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          handle: string
+          id?: string
+          linked_in_whop?: boolean
+          notes?: string | null
+          platform: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          handle?: string
+          id?: string
+          linked_in_whop?: boolean
+          notes?: string | null
+          platform?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cr_agent_runs: {
+        Row: {
+          agent_key: string
+          finished_at: string | null
+          id: number
+          items_processed: number
+          started_at: string
+          status: string
+          summary: string | null
+        }
+        Insert: {
+          agent_key: string
+          finished_at?: string | null
+          id?: number
+          items_processed?: number
+          started_at?: string
+          status?: string
+          summary?: string | null
+        }
+        Update: {
+          agent_key?: string
+          finished_at?: string | null
+          id?: number
+          items_processed?: number
+          started_at?: string
+          status?: string
+          summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cr_agent_runs_agent_key_fkey"
+            columns: ["agent_key"]
+            isOneToOne: false
+            referencedRelation: "cr_agents"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      cr_agents: {
+        Row: {
+          autonomy: string
+          description: string | null
+          enabled: boolean
+          key: string
+          last_run_at: string | null
+          last_status: string | null
+          name: string
+          next_run_at: string | null
+          role: string | null
+          schedule_text: string | null
+          sort: number
+        }
+        Insert: {
+          autonomy?: string
+          description?: string | null
+          enabled?: boolean
+          key: string
+          last_run_at?: string | null
+          last_status?: string | null
+          name: string
+          next_run_at?: string | null
+          role?: string | null
+          schedule_text?: string | null
+          sort?: number
+        }
+        Update: {
+          autonomy?: string
+          description?: string | null
+          enabled?: boolean
+          key?: string
+          last_run_at?: string | null
+          last_status?: string | null
+          name?: string
+          next_run_at?: string | null
+          role?: string | null
+          schedule_text?: string | null
+          sort?: number
+        }
+        Relationships: []
+      }
+      cr_campaigns: {
+        Row: {
+          brand: string | null
+          budget_remaining_usd: number | null
+          budget_total_usd: number | null
+          category: string
+          created_at: string
+          deadline: string | null
+          disclosure_required: boolean
+          flat_fee_usd: number | null
+          id: string
+          max_length_s: number | null
+          max_payout_usd: number | null
+          min_length_s: number | null
+          min_payout_usd: number | null
+          notes: string | null
+          platforms: string[]
+          prohibited: string | null
+          rate_per_1k_usd: number | null
+          red_flags: string[]
+          required_credit: string | null
+          required_hashtags: string[]
+          score: number | null
+          source_assets: string[]
+          status: string
+          title: string | null
+          updated_at: string
+          whop_url: string
+        }
+        Insert: {
+          brand?: string | null
+          budget_remaining_usd?: number | null
+          budget_total_usd?: number | null
+          category?: string
+          created_at?: string
+          deadline?: string | null
+          disclosure_required?: boolean
+          flat_fee_usd?: number | null
+          id?: string
+          max_length_s?: number | null
+          max_payout_usd?: number | null
+          min_length_s?: number | null
+          min_payout_usd?: number | null
+          notes?: string | null
+          platforms?: string[]
+          prohibited?: string | null
+          rate_per_1k_usd?: number | null
+          red_flags?: string[]
+          required_credit?: string | null
+          required_hashtags?: string[]
+          score?: number | null
+          source_assets?: string[]
+          status?: string
+          title?: string | null
+          updated_at?: string
+          whop_url: string
+        }
+        Update: {
+          brand?: string | null
+          budget_remaining_usd?: number | null
+          budget_total_usd?: number | null
+          category?: string
+          created_at?: string
+          deadline?: string | null
+          disclosure_required?: boolean
+          flat_fee_usd?: number | null
+          id?: string
+          max_length_s?: number | null
+          max_payout_usd?: number | null
+          min_length_s?: number | null
+          min_payout_usd?: number | null
+          notes?: string | null
+          platforms?: string[]
+          prohibited?: string | null
+          rate_per_1k_usd?: number | null
+          red_flags?: string[]
+          required_credit?: string | null
+          required_hashtags?: string[]
+          score?: number | null
+          source_assets?: string[]
+          status?: string
+          title?: string | null
+          updated_at?: string
+          whop_url?: string
+        }
+        Relationships: []
+      }
+      cr_clips: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          created_by_agent: string | null
+          file_ref: string | null
+          hook: string | null
+          id: string
+          qa_notes: string | null
+          source_end_s: number | null
+          source_start_s: number | null
+          source_url: string | null
+          stage: string
+          updated_at: string
+          value_layer: string | null
+          variant: string | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          created_by_agent?: string | null
+          file_ref?: string | null
+          hook?: string | null
+          id?: string
+          qa_notes?: string | null
+          source_end_s?: number | null
+          source_start_s?: number | null
+          source_url?: string | null
+          stage?: string
+          updated_at?: string
+          value_layer?: string | null
+          variant?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          created_by_agent?: string | null
+          file_ref?: string | null
+          hook?: string | null
+          id?: string
+          qa_notes?: string | null
+          source_end_s?: number | null
+          source_start_s?: number | null
+          source_url?: string | null
+          stage?: string
+          updated_at?: string
+          value_layer?: string | null
+          variant?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cr_clips_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "cr_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cr_posts: {
+        Row: {
+          account_id: string | null
+          caption: string | null
+          clip_id: string
+          created_at: string
+          denial_reason: string | null
+          earning_window_ends_at: string | null
+          est_earnings_usd: number
+          id: string
+          paid_usd: number
+          payout_eta: string | null
+          platform: string | null
+          post_url: string
+          posted_at: string | null
+          submission_status: string
+          updated_at: string
+          views_24h: number | null
+          views_72h: number | null
+          views_7d: number | null
+          views_current: number
+          whop_submission_id: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          caption?: string | null
+          clip_id: string
+          created_at?: string
+          denial_reason?: string | null
+          earning_window_ends_at?: string | null
+          est_earnings_usd?: number
+          id?: string
+          paid_usd?: number
+          payout_eta?: string | null
+          platform?: string | null
+          post_url: string
+          posted_at?: string | null
+          submission_status?: string
+          updated_at?: string
+          views_24h?: number | null
+          views_72h?: number | null
+          views_7d?: number | null
+          views_current?: number
+          whop_submission_id?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          caption?: string | null
+          clip_id?: string
+          created_at?: string
+          denial_reason?: string | null
+          earning_window_ends_at?: string | null
+          est_earnings_usd?: number
+          id?: string
+          paid_usd?: number
+          payout_eta?: string | null
+          platform?: string | null
+          post_url?: string
+          posted_at?: string | null
+          submission_status?: string
+          updated_at?: string
+          views_24h?: number | null
+          views_72h?: number | null
+          views_7d?: number | null
+          views_current?: number
+          whop_submission_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cr_posts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "cr_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cr_posts_clip_id_fkey"
+            columns: ["clip_id"]
+            isOneToOne: false
+            referencedRelation: "cr_clips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       desk_config: {
         Row: {
           budget_sek: number
@@ -1495,6 +1838,180 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cr_add_clip: {
+        Args: { p: Json; p_campaign_id: string }
+        Returns: {
+          campaign_id: string
+          created_at: string
+          created_by_agent: string | null
+          file_ref: string | null
+          hook: string | null
+          id: string
+          qa_notes: string | null
+          source_end_s: number | null
+          source_start_s: number | null
+          source_url: string | null
+          stage: string
+          updated_at: string
+          value_layer: string | null
+          variant: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "cr_clips"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      cr_log_agent_run: {
+        Args: {
+          p_agent_key: string
+          p_items: number
+          p_next_run_at: string
+          p_started_at: string
+          p_status: string
+          p_summary: string
+        }
+        Returns: {
+          agent_key: string
+          finished_at: string | null
+          id: number
+          items_processed: number
+          started_at: string
+          status: string
+          summary: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "cr_agent_runs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      cr_record_post: {
+        Args: { p: Json; p_clip_id: string }
+        Returns: {
+          account_id: string | null
+          caption: string | null
+          clip_id: string
+          created_at: string
+          denial_reason: string | null
+          earning_window_ends_at: string | null
+          est_earnings_usd: number
+          id: string
+          paid_usd: number
+          payout_eta: string | null
+          platform: string | null
+          post_url: string
+          posted_at: string | null
+          submission_status: string
+          updated_at: string
+          views_24h: number | null
+          views_72h: number | null
+          views_7d: number | null
+          views_current: number
+          whop_submission_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "cr_posts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      cr_set_clip_stage: {
+        Args: { p_clip_id: string; p_notes: string; p_stage: string }
+        Returns: {
+          campaign_id: string
+          created_at: string
+          created_by_agent: string | null
+          file_ref: string | null
+          hook: string | null
+          id: string
+          qa_notes: string | null
+          source_end_s: number | null
+          source_start_s: number | null
+          source_url: string | null
+          stage: string
+          updated_at: string
+          value_layer: string | null
+          variant: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "cr_clips"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      cr_update_post_metrics: {
+        Args: { p: Json; p_post_id: string }
+        Returns: {
+          account_id: string | null
+          caption: string | null
+          clip_id: string
+          created_at: string
+          denial_reason: string | null
+          earning_window_ends_at: string | null
+          est_earnings_usd: number
+          id: string
+          paid_usd: number
+          payout_eta: string | null
+          platform: string | null
+          post_url: string
+          posted_at: string | null
+          submission_status: string
+          updated_at: string
+          views_24h: number | null
+          views_72h: number | null
+          views_7d: number | null
+          views_current: number
+          whop_submission_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "cr_posts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      cr_upsert_campaign: {
+        Args: { p: Json }
+        Returns: {
+          brand: string | null
+          budget_remaining_usd: number | null
+          budget_total_usd: number | null
+          category: string
+          created_at: string
+          deadline: string | null
+          disclosure_required: boolean
+          flat_fee_usd: number | null
+          id: string
+          max_length_s: number | null
+          max_payout_usd: number | null
+          min_length_s: number | null
+          min_payout_usd: number | null
+          notes: string | null
+          platforms: string[]
+          prohibited: string | null
+          rate_per_1k_usd: number | null
+          red_flags: string[]
+          required_credit: string | null
+          required_hashtags: string[]
+          score: number | null
+          source_assets: string[]
+          status: string
+          title: string | null
+          updated_at: string
+          whop_url: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "cr_campaigns"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       hl_backtest_data: { Args: { p_coin: string }; Returns: Json }
       hl_latest_t: { Args: { p_coin: string }; Returns: Json }
       is_owner: { Args: never; Returns: boolean }
