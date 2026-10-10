@@ -242,7 +242,7 @@ export async function runExecute(db: DB) {
     if (shadowed.has(s.id)) continue;
     const mark = Number(mids[s.coin]);
     if (!(mark > 0)) continue;
-    const z = sizePosition(cfg, s.coin, s.side as "long" | "short", mark, +s.stop_px, equity, 0);
+    const z = sizePosition(cfg, s.coin, s.side as "long" | "short", mark, +s.stop_px, equity, 0, true);
     if (!z.ok) { await log(db, `[SHADOW] ${s.coin} ${s.setup} not opened: ${z.reason}`, "WARN"); continue; }
     await insertPosition(db, s, z, true, now, cfg, "vetoed");
     out.shadow.push(s.coin);
@@ -270,7 +270,7 @@ export async function runExecute(db: DB) {
       await log(db, `RISK REJECTED ${s.coin} ${s.setup}: ${res.reason}`, "WARN");
       // Track the blocked trade as a shadow too, so every reviewed signal gets an outcome to learn from.
       if (mark > 0) {
-        const z = sizePosition(cfg, s.coin, s.side as "long" | "short", mark, +s.stop_px, equity, 0);
+        const z = sizePosition(cfg, s.coin, s.side as "long" | "short", mark, +s.stop_px, equity, 0, true);
         if (z.ok) {
           await insertPosition(db, s, z, true, now, cfg, "risk");
           await log(db, `[SHADOW] ${s.coin} ${s.side.toUpperCase()} ${s.setup} opened @ ${z.entry.toPrecision(6)} (blocked by risk rules, tracked for comparison)`);

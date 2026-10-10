@@ -70,7 +70,12 @@ export async function trackWatchlist(db: DB) {
   }
   // Drop snapshots of wallets that left the watchlist.
   const wlSet = (wl ?? []).map((w) => w.address);
-  if (wlSet.length) await db.from("sm_positions").delete().not("address", "in", `(${wlSet.map((a) => `"${a}"`).join(",")})`);
+  if (wlSet.length) {
+    const inList = `(${wlSet.map((a) => `"${a}"`).join(",")})`;
+    await db.from("sm_positions").delete().not("address", "in", inList);
+    // A dropped snapshot means a fresh baseline if the wallet comes back, never "everything it holds is new".
+    await db.from("sm_scores").update({ tracked_at: null }).not("tracked_at", "is", null).not("address", "in", inList);
+  }
 
   const signals = await followSignals(db);
   const exits = await followExits(db);

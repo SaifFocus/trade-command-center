@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { evaluateEntry, type DeskCfg, type EntryInput } from "./risk";
+import { evaluateEntry, sizePosition, type DeskCfg, type EntryInput } from "./risk";
 
 const cfg: DeskCfg = {
   budget_sek: 600, usd_sek: 10, risk_pct: 1.5, max_risk_pct: 2, max_open: 2, min_order_usd: 10,
@@ -40,6 +40,13 @@ describe("paper desk risk rules", () => {
     if (r.ok) expect(r.notional_usd).toBe(10);
     // 30% stop: $10 risks ~$3 = 5% > 2%
     expect(reason({ stop_px: 70, mark: 100 })).toMatch(/max 2%/);
+  });
+  it("shadow positions skip the minimum order so blocked trades still get an outcome", () => {
+    // 30% stop: the real desk refuses ($10 minimum would risk 5%), the shadow sizes at the normal 1.5% risk.
+    expect(sizePosition(cfg, "SOL", "long", 100, 70, 60, 0).ok).toBe(false);
+    const z = sizePosition(cfg, "SOL", "long", 100, 70, 60, 0, true);
+    expect(z.ok).toBe(true);
+    if (z.ok) expect(z.risk_usd).toBeCloseTo(0.9, 6);
   });
   it("leverage cap 5x BTC, 3x others", () => {
     const b = evaluateEntry({ ...base, coin: "BTC", stop_px: 99, ref_px: 100 });

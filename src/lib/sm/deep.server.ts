@@ -162,9 +162,16 @@ export async function rebuildWatchlist(db: DB) {
   const top = new Set(ranked.slice(0, 30).map((r) => r.address));
   const practice = practicePool.filter((r) => !top.has(r.address))
     .sort((a, b) => penal(a.address) - penal(b.address) || +b.score - +a.score).slice(0, PRACTICE_SLOTS).map((r) => r.address);
-  await db.from("sm_scores").update({ watchlist: false, practice: false }).or("watchlist.eq.true,practice.eq.true");
-  if (top.size) await db.from("sm_scores").update({ watchlist: true }).in("address", Array.from(top));
-  if (practice.length) await db.from("sm_scores").update({ watchlist: true, practice: true }).in("address", practice);
+  // Flip only what changed, so the tracker never sees a moment with the flags all off (it would drop and re-read
+  // every position as new).
+  const { data: cur } = await db.from("sm_scores").select("address,practice").eq("watchlist", true);
+  const want = new Map<string, boolean>([...Array.from(top).map((a) => [a, false] as [string, boolean]), ...practice.map((a) => [a, true] as [string, boolean])]);
+  const drop = (cur ?? []).filter((r) => !want.has(r.address)).map((r) => r.address);
+  const toReal = Array.from(want).filter(([a, p]) => !p && (cur ?? []).find((r) => r.address === a)?.practice !== false).map(([a]) => a);
+  const toPractice = Array.from(want).filter(([a, p]) => p && (cur ?? []).find((r) => r.address === a)?.practice !== true).map(([a]) => a);
+  if (drop.length) await db.from("sm_scores").update({ watchlist: false, practice: false }).in("address", drop);
+  if (toReal.length) await db.from("sm_scores").update({ watchlist: true, practice: false }).in("address", toReal);
+  if (toPractice.length) await db.from("sm_scores").update({ watchlist: true, practice: true }).in("address", toPractice);
   const { rebuildMimic } = await import("./mimic.server");
   await rebuildMimic(db as never);
   // Wallets no longer tracked get a fresh baseline if they come back (see trackWatchlist).

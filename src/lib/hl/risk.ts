@@ -26,7 +26,8 @@ export function equityUsd(cfg: DeskCfg, realizedNet: number) {
 export const leverageCap = (coin: string) => (coin === "BTC" || coin === "ETH" ? 5 : 3);
 
 /** Fill at mark ± slippage, size by risk_pct of equity, apply min order / max risk / margin rules. */
-export function sizePosition(cfg: DeskCfg, coin: string, side: "long" | "short", mark: number, stop: number, equity: number, usedMargin: number): ({ ok: true } & Sized) | { ok: false; reason: string } {
+/** `shadow`: a comparison-only position, sized at the normal risk with no minimum order or margin check (it is never sent). */
+export function sizePosition(cfg: DeskCfg, coin: string, side: "long" | "short", mark: number, stop: number, equity: number, usedMargin: number, shadow = false): ({ ok: true } & Sized) | { ok: false; reason: string } {
   const dir = side === "long" ? 1 : -1;
   const entry = mark * (1 + (dir * cfg.slip_pct) / 100);
   const R = Math.abs(entry - stop);
@@ -34,7 +35,7 @@ export function sizePosition(cfg: DeskCfg, coin: string, side: "long" | "short",
   const stopDist = R / entry;
   let risk = (equity * cfg.risk_pct) / 100;
   let notional = risk / stopDist;
-  if (notional < cfg.min_order_usd) {
+  if (!shadow && notional < cfg.min_order_usd) {
     notional = cfg.min_order_usd;
     risk = notional * stopDist;
     if (risk > (equity * cfg.max_risk_pct) / 100)
@@ -43,7 +44,7 @@ export function sizePosition(cfg: DeskCfg, coin: string, side: "long" | "short",
   const leverage = leverageCap(coin);
   const margin = notional / leverage;
   const free = equity - usedMargin;
-  if (margin > free) return { ok: false, reason: `margin $${margin.toFixed(2)} exceeds free equity $${free.toFixed(2)}` };
+  if (!shadow && margin > free) return { ok: false, reason: `margin $${margin.toFixed(2)} exceeds free equity $${free.toFixed(2)}` };
   return { ok: true, entry, R, t1: entry + dir * 1.5 * R, t2: entry + dir * 3 * R, size_coin: notional / entry, notional_usd: notional, margin_usd: margin, leverage, risk_usd: risk };
 }
 
