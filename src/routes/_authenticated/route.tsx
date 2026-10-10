@@ -1,9 +1,11 @@
-import { createFileRoute, Outlet, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ownerStatusFn, claimOwnerFn } from "@/lib/auth/owner.functions";
+import { useSignOut } from "@/lib/auth/use-sign-out";
+import { AppShell } from "@/components/nav/AppShell";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -15,17 +17,6 @@ export const Route = createFileRoute("/_authenticated")({
   component: OwnerGate,
 });
 
-export function useSignOut() {
-  const qc = useQueryClient();
-  const navigate = useNavigate();
-  return async () => {
-    await qc.cancelQueries();
-    qc.clear();
-    await supabase.auth.signOut();
-    navigate({ to: "/login", replace: true });
-  };
-}
-
 function OwnerGate() {
   const getStatus = useServerFn(ownerStatusFn);
   const claim = useServerFn(claimOwnerFn);
@@ -36,7 +27,13 @@ function OwnerGate() {
   if (q.isLoading) {
     return <div className="min-h-screen grid place-items-center text-xs tracking-[0.3em] text-neon font-mono">VERIFYING ACCESS...</div>;
   }
-  if (q.data?.isOwner) return <Outlet />;
+  if (q.data?.isOwner) {
+    return (
+      <AppShell>
+        <Outlet />
+      </AppShell>
+    );
+  }
 
   return (
     <div className="min-h-screen grid place-items-center px-4">

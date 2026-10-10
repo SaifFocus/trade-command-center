@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,7 +57,6 @@ function BacktestPage() {
       <header className="panel border-b">
         <div className="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-4">
           <h1 className="text-neon font-display text-2xl font-black tracking-[0.2em]">APEX · BACKTEST</h1>
-          <Link to="/" className="text-xs tracking-widest text-muted-foreground hover:text-neon">← DASHBOARD</Link>
         </div>
       </header>
       <main className="mx-auto max-w-[1600px] px-6 py-6 space-y-6">

@@ -15,6 +15,13 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedBacktestRouteImport } from './routes/_authenticated/backtest'
 import { Route as AuthenticatedDeskRouteImport } from './routes/_authenticated/desk'
 import { Route as AuthenticatedScoutRouteImport } from './routes/_authenticated/scout'
+import { Route as AuthenticatedRewardsIndexRouteImport } from './routes/_authenticated/rewards/index'
+import { Route as AuthenticatedRewardsAccountsRouteImport } from './routes/_authenticated/rewards/accounts'
+import { Route as AuthenticatedRewardsAgentsRouteImport } from './routes/_authenticated/rewards/agents'
+import { Route as AuthenticatedRewardsApprovalsRouteImport } from './routes/_authenticated/rewards/approvals'
+import { Route as AuthenticatedRewardsCampaignsRouteImport } from './routes/_authenticated/rewards/campaigns'
+import { Route as AuthenticatedRewardsEarningsRouteImport } from './routes/_authenticated/rewards/earnings'
+import { Route as AuthenticatedRewardsPipelineRouteImport } from './routes/_authenticated/rewards/pipeline'
 import { Route as ApiCronDeskCycleRouteImport } from './routes/api/cron/desk-cycle'
 import { Route as ApiCronDeskExecuteRouteImport } from './routes/api/cron/desk-execute'
 import { Route as ApiCronDeskUniverseRouteImport } from './routes/api/cron/desk-universe'
@@ -54,6 +61,48 @@ const AuthenticatedScoutRoute = AuthenticatedScoutRouteImport.update({
   path: '/scout',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRewardsIndexRoute =
+  AuthenticatedRewardsIndexRouteImport.update({
+    id: '/rewards/',
+    path: '/rewards/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedRewardsAccountsRoute =
+  AuthenticatedRewardsAccountsRouteImport.update({
+    id: '/rewards/accounts',
+    path: '/rewards/accounts',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedRewardsAgentsRoute =
+  AuthenticatedRewardsAgentsRouteImport.update({
+    id: '/rewards/agents',
+    path: '/rewards/agents',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedRewardsApprovalsRoute =
+  AuthenticatedRewardsApprovalsRouteImport.update({
+    id: '/rewards/approvals',
+    path: '/rewards/approvals',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedRewardsCampaignsRoute =
+  AuthenticatedRewardsCampaignsRouteImport.update({
+    id: '/rewards/campaigns',
+    path: '/rewards/campaigns',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedRewardsEarningsRoute =
+  AuthenticatedRewardsEarningsRouteImport.update({
+    id: '/rewards/earnings',
+    path: '/rewards/earnings',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedRewardsPipelineRoute =
+  AuthenticatedRewardsPipelineRouteImport.update({
+    id: '/rewards/pipeline',
+    path: '/rewards/pipeline',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiCronDeskCycleRoute = ApiCronDeskCycleRouteImport.update({
   id: '/api/cron/desk-cycle',
   path: '/api/cron/desk-cycle',
@@ -106,6 +155,12 @@ export interface FileRoutesByFullPath {
   '/backtest': typeof AuthenticatedBacktestRoute
   '/desk': typeof AuthenticatedDeskRoute
   '/scout': typeof AuthenticatedScoutRoute
+  '/rewards/accounts': typeof AuthenticatedRewardsAccountsRoute
+  '/rewards/agents': typeof AuthenticatedRewardsAgentsRoute
+  '/rewards/approvals': typeof AuthenticatedRewardsApprovalsRoute
+  '/rewards/campaigns': typeof AuthenticatedRewardsCampaignsRoute
+  '/rewards/earnings': typeof AuthenticatedRewardsEarningsRoute
+  '/rewards/pipeline': typeof AuthenticatedRewardsPipelineRoute
   '/api/cron/desk-cycle': typeof ApiCronDeskCycleRoute
   '/api/cron/desk-execute': typeof ApiCronDeskExecuteRoute
   '/api/cron/desk-universe': typeof ApiCronDeskUniverseRoute
@@ -115,6 +170,7 @@ export interface FileRoutesByFullPath {
   '/api/cron/sm-daily': typeof ApiCronSmDailyRoute
   '/api/cron/sm-deep-dive': typeof ApiCronSmDeepDiveRoute
   '/api/cron/sm-track': typeof ApiCronSmTrackRoute
+  '/rewards/': typeof AuthenticatedRewardsIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -122,6 +178,12 @@ export interface FileRoutesByTo {
   '/desk': typeof AuthenticatedDeskRoute
   '/scout': typeof AuthenticatedScoutRoute
   '/': typeof AuthenticatedIndexRoute
+  '/rewards/accounts': typeof AuthenticatedRewardsAccountsRoute
+  '/rewards/agents': typeof AuthenticatedRewardsAgentsRoute
+  '/rewards/approvals': typeof AuthenticatedRewardsApprovalsRoute
+  '/rewards/campaigns': typeof AuthenticatedRewardsCampaignsRoute
+  '/rewards/earnings': typeof AuthenticatedRewardsEarningsRoute
+  '/rewards/pipeline': typeof AuthenticatedRewardsPipelineRoute
   '/api/cron/desk-cycle': typeof ApiCronDeskCycleRoute
   '/api/cron/desk-execute': typeof ApiCronDeskExecuteRoute
   '/api/cron/desk-universe': typeof ApiCronDeskUniverseRoute
@@ -131,6 +193,7 @@ export interface FileRoutesByTo {
   '/api/cron/sm-daily': typeof ApiCronSmDailyRoute
   '/api/cron/sm-deep-dive': typeof ApiCronSmDeepDiveRoute
   '/api/cron/sm-track': typeof ApiCronSmTrackRoute
+  '/rewards': typeof AuthenticatedRewardsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -140,6 +203,12 @@ export interface FileRoutesById {
   '/_authenticated/desk': typeof AuthenticatedDeskRoute
   '/_authenticated/scout': typeof AuthenticatedScoutRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/rewards/accounts': typeof AuthenticatedRewardsAccountsRoute
+  '/_authenticated/rewards/agents': typeof AuthenticatedRewardsAgentsRoute
+  '/_authenticated/rewards/approvals': typeof AuthenticatedRewardsApprovalsRoute
+  '/_authenticated/rewards/campaigns': typeof AuthenticatedRewardsCampaignsRoute
+  '/_authenticated/rewards/earnings': typeof AuthenticatedRewardsEarningsRoute
+  '/_authenticated/rewards/pipeline': typeof AuthenticatedRewardsPipelineRoute
   '/api/cron/desk-cycle': typeof ApiCronDeskCycleRoute
   '/api/cron/desk-execute': typeof ApiCronDeskExecuteRoute
   '/api/cron/desk-universe': typeof ApiCronDeskUniverseRoute
@@ -149,6 +218,7 @@ export interface FileRoutesById {
   '/api/cron/sm-daily': typeof ApiCronSmDailyRoute
   '/api/cron/sm-deep-dive': typeof ApiCronSmDeepDiveRoute
   '/api/cron/sm-track': typeof ApiCronSmTrackRoute
+  '/_authenticated/rewards/': typeof AuthenticatedRewardsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -158,6 +228,12 @@ export interface FileRouteTypes {
     | '/backtest'
     | '/desk'
     | '/scout'
+    | '/rewards/accounts'
+    | '/rewards/agents'
+    | '/rewards/approvals'
+    | '/rewards/campaigns'
+    | '/rewards/earnings'
+    | '/rewards/pipeline'
     | '/api/cron/desk-cycle'
     | '/api/cron/desk-execute'
     | '/api/cron/desk-universe'
@@ -167,6 +243,7 @@ export interface FileRouteTypes {
     | '/api/cron/sm-daily'
     | '/api/cron/sm-deep-dive'
     | '/api/cron/sm-track'
+    | '/rewards/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -174,6 +251,12 @@ export interface FileRouteTypes {
     | '/desk'
     | '/scout'
     | '/'
+    | '/rewards/accounts'
+    | '/rewards/agents'
+    | '/rewards/approvals'
+    | '/rewards/campaigns'
+    | '/rewards/earnings'
+    | '/rewards/pipeline'
     | '/api/cron/desk-cycle'
     | '/api/cron/desk-execute'
     | '/api/cron/desk-universe'
@@ -183,6 +266,7 @@ export interface FileRouteTypes {
     | '/api/cron/sm-daily'
     | '/api/cron/sm-deep-dive'
     | '/api/cron/sm-track'
+    | '/rewards'
   id:
     | '__root__'
     | '/_authenticated'
@@ -191,6 +275,12 @@ export interface FileRouteTypes {
     | '/_authenticated/desk'
     | '/_authenticated/scout'
     | '/_authenticated/'
+    | '/_authenticated/rewards/accounts'
+    | '/_authenticated/rewards/agents'
+    | '/_authenticated/rewards/approvals'
+    | '/_authenticated/rewards/campaigns'
+    | '/_authenticated/rewards/earnings'
+    | '/_authenticated/rewards/pipeline'
     | '/api/cron/desk-cycle'
     | '/api/cron/desk-execute'
     | '/api/cron/desk-universe'
@@ -200,6 +290,7 @@ export interface FileRouteTypes {
     | '/api/cron/sm-daily'
     | '/api/cron/sm-deep-dive'
     | '/api/cron/sm-track'
+    | '/_authenticated/rewards/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -258,6 +349,55 @@ declare module '@tanstack/react-router' {
       path: '/scout'
       fullPath: '/scout'
       preLoaderRoute: typeof AuthenticatedScoutRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/rewards/': {
+      id: '/_authenticated/rewards/'
+      path: '/rewards'
+      fullPath: '/rewards/'
+      preLoaderRoute: typeof AuthenticatedRewardsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/rewards/accounts': {
+      id: '/_authenticated/rewards/accounts'
+      path: '/rewards/accounts'
+      fullPath: '/rewards/accounts'
+      preLoaderRoute: typeof AuthenticatedRewardsAccountsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/rewards/agents': {
+      id: '/_authenticated/rewards/agents'
+      path: '/rewards/agents'
+      fullPath: '/rewards/agents'
+      preLoaderRoute: typeof AuthenticatedRewardsAgentsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/rewards/approvals': {
+      id: '/_authenticated/rewards/approvals'
+      path: '/rewards/approvals'
+      fullPath: '/rewards/approvals'
+      preLoaderRoute: typeof AuthenticatedRewardsApprovalsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/rewards/campaigns': {
+      id: '/_authenticated/rewards/campaigns'
+      path: '/rewards/campaigns'
+      fullPath: '/rewards/campaigns'
+      preLoaderRoute: typeof AuthenticatedRewardsCampaignsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/rewards/earnings': {
+      id: '/_authenticated/rewards/earnings'
+      path: '/rewards/earnings'
+      fullPath: '/rewards/earnings'
+      preLoaderRoute: typeof AuthenticatedRewardsEarningsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/rewards/pipeline': {
+      id: '/_authenticated/rewards/pipeline'
+      path: '/rewards/pipeline'
+      fullPath: '/rewards/pipeline'
+      preLoaderRoute: typeof AuthenticatedRewardsPipelineRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/api/cron/desk-cycle': {
@@ -331,6 +471,13 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDeskRoute: typeof AuthenticatedDeskRoute
   AuthenticatedScoutRoute: typeof AuthenticatedScoutRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedRewardsAccountsRoute: typeof AuthenticatedRewardsAccountsRoute
+  AuthenticatedRewardsAgentsRoute: typeof AuthenticatedRewardsAgentsRoute
+  AuthenticatedRewardsApprovalsRoute: typeof AuthenticatedRewardsApprovalsRoute
+  AuthenticatedRewardsCampaignsRoute: typeof AuthenticatedRewardsCampaignsRoute
+  AuthenticatedRewardsEarningsRoute: typeof AuthenticatedRewardsEarningsRoute
+  AuthenticatedRewardsPipelineRoute: typeof AuthenticatedRewardsPipelineRoute
+  AuthenticatedRewardsIndexRoute: typeof AuthenticatedRewardsIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -338,6 +485,13 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDeskRoute: AuthenticatedDeskRoute,
   AuthenticatedScoutRoute: AuthenticatedScoutRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedRewardsAccountsRoute: AuthenticatedRewardsAccountsRoute,
+  AuthenticatedRewardsAgentsRoute: AuthenticatedRewardsAgentsRoute,
+  AuthenticatedRewardsApprovalsRoute: AuthenticatedRewardsApprovalsRoute,
+  AuthenticatedRewardsCampaignsRoute: AuthenticatedRewardsCampaignsRoute,
+  AuthenticatedRewardsEarningsRoute: AuthenticatedRewardsEarningsRoute,
+  AuthenticatedRewardsPipelineRoute: AuthenticatedRewardsPipelineRoute,
+  AuthenticatedRewardsIndexRoute: AuthenticatedRewardsIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

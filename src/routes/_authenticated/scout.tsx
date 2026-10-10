@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
@@ -158,10 +158,6 @@ function ScoutPage() {
       <header className="panel border-b">
         <div className="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-4">
           <h1 className="text-neon font-display text-2xl font-black tracking-[0.2em]">APEX · SCOUT</h1>
-          <div className="flex gap-4">
-            <Link to="/desk" className="text-xs tracking-widest text-muted-foreground hover:text-neon">DESK</Link>
-            <Link to="/" className="text-xs tracking-widest text-muted-foreground hover:text-neon">← DASHBOARD</Link>
-          </div>
         </div>
       </header>
       <main className="mx-auto max-w-[1600px] space-y-4 px-6 py-6">
