@@ -20,8 +20,16 @@ describe("pickMimic", () => {
     ], NOW);
     expect(picked).toEqual(["high", "low"]);
   });
+  it("keeps current mirrors, then prefers traders active in the last day", () => {
+    const picked = pickMimic([
+      c({ address: "old_high", score: 9, last_trade_at: NOW - 2 * 86400_000 }),
+      c({ address: "fresh_low", score: 2 }),
+      c({ address: "kept", score: 1, last_trade_at: NOW - 2.5 * 86400_000 }),
+    ], NOW, 2, new Set(["kept"]));
+    expect(picked).toEqual(["kept", "fresh_low"]);
+  });
   it("respects the slot limit", () => {
-    expect(pickMimic(Array.from({ length: 15 }, (_, i) => c({ address: `w${i}` })), NOW).length).toBe(MIMIC.slots);
+    expect(pickMimic(Array.from({ length: MIMIC.slots + 5 }, (_, i) => c({ address: `w${i}` })), NOW).length).toBe(MIMIC.slots);
   });
 });
 

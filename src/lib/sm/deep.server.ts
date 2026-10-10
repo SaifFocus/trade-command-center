@@ -151,7 +151,7 @@ const practiceOk = (f: unknown) => {
 export async function rebuildWatchlist(db: DB) {
   const [{ data: sc }, { data: pc }] = await Promise.all([
     db.from("sm_scores").select("address,score,tier").not("tier", "is", null).order("score", { ascending: false }).limit(500),
-    db.from("sm_scores").select("address,score,filters").is("tier", null).eq("fast", false).order("score", { ascending: false }).limit(1000),
+    db.from("sm_scores").select("address,score,filters").is("tier", null).eq("fast", false).gte("score", 3).order("score", { ascending: false }).limit(1000),
   ]);
   const practicePool = (pc ?? []).filter((r) => practiceOk(r.filters));
   const addrs = [...(sc ?? []), ...practicePool].map((r) => r.address);

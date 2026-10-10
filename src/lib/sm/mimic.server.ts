@@ -29,10 +29,15 @@ export async function rebuildMimic(db: DB): Promise<number> {
       ret_30: r.ret_30 == null ? null : Number(r.ret_30), ret_90: r.ret_90 == null ? null : Number(r.ret_90),
       last_trade_at: r.last_trade_at ? Date.parse(r.last_trade_at) : null, liquid_share: r.liquid_share == null ? null : Number(r.liquid_share),
     }));
-    pick = pickMimic(cands, Date.now());
+    const { data: cur } = await db.from("sm_scores").select("address").eq("mirror", true);
+    pick = pickMimic(cands, Date.now(), MIMIC.slots, new Set((cur ?? []).map((r) => r.address as string)));
   }
-  await db.from("sm_scores").update({ mirror: false }).eq("mirror", true);
-  if (pick.length) await db.from("sm_scores").update({ mirror: true }).in("address", pick);
+  const { data: now } = await db.from("sm_scores").select("address").eq("mirror", true);
+  const was = new Set((now ?? []).map((r) => r.address as string));
+  const drop = Array.from(was).filter((a) => !pick.includes(a));
+  const add = pick.filter((a) => !was.has(a));
+  if (drop.length) await db.from("sm_scores").update({ mirror: false }).in("address", drop);
+  if (add.length) await db.from("sm_scores").update({ mirror: true }).in("address", add);
   return pick.length;
 }
 
