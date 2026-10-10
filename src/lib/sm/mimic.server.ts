@@ -66,7 +66,8 @@ export async function mimicStep(db: DB, events: TrackEvent[], mirror: Set<string
     for (const t of open ?? []) await close(t, "trader_closed");
   }
   for (const e of events) {
-    if (e.kind !== "open" || !mirror.has(e.address) || !liquid.has(e.coin)) continue;
+    // A new order is what Invo's Mimic copies: a fresh open, or an add to a position held before we started watching.
+    if ((e.kind !== "open" && e.kind !== "increase") || !mirror.has(e.address) || !liquid.has(e.coin)) continue;
     const mark = Number(mids[e.coin]);
     if (!(mark > 0)) continue;
     const { data: existing } = await db.from("mimic_trades").select("id").eq("status", "open").eq("address", e.address).eq("coin", e.coin).limit(1);
