@@ -195,6 +195,19 @@ export type Database = {
           id: number
           kill_drawdown_pct: number
           kill_switch: boolean
+          live_armed: boolean
+          live_armed_at: string | null
+          live_fills_cursor_ms: number | null
+          live_last_reconcile_at: string | null
+          live_lock_owner: string | null
+          live_lock_until: string | null
+          live_min_volume_usd: number
+          live_setups: string[]
+          live_start_equity_usd: number | null
+          live_trip_reason: string | null
+          live_trip_streak: number
+          live_whitelist: string[]
+          max_entries_per_day: number
           max_open: number
           max_risk_pct: number
           min_order_usd: number
@@ -204,6 +217,8 @@ export type Database = {
           review_window_minutes: number
           risk_pct: number
           slip_pct: number
+          smoke_test_passed_at: string | null
+          smoke_test_result: Json | null
           updated_at: string | null
           usd_sek: number | null
           usd_sek_updated_at: string | null
@@ -217,6 +232,19 @@ export type Database = {
           id?: number
           kill_drawdown_pct?: number
           kill_switch?: boolean
+          live_armed?: boolean
+          live_armed_at?: string | null
+          live_fills_cursor_ms?: number | null
+          live_last_reconcile_at?: string | null
+          live_lock_owner?: string | null
+          live_lock_until?: string | null
+          live_min_volume_usd?: number
+          live_setups?: string[]
+          live_start_equity_usd?: number | null
+          live_trip_reason?: string | null
+          live_trip_streak?: number
+          live_whitelist?: string[]
+          max_entries_per_day?: number
           max_open?: number
           max_risk_pct?: number
           min_order_usd?: number
@@ -226,6 +254,8 @@ export type Database = {
           review_window_minutes?: number
           risk_pct?: number
           slip_pct?: number
+          smoke_test_passed_at?: string | null
+          smoke_test_result?: Json | null
           updated_at?: string | null
           usd_sek?: number | null
           usd_sek_updated_at?: string | null
@@ -239,6 +269,19 @@ export type Database = {
           id?: number
           kill_drawdown_pct?: number
           kill_switch?: boolean
+          live_armed?: boolean
+          live_armed_at?: string | null
+          live_fills_cursor_ms?: number | null
+          live_last_reconcile_at?: string | null
+          live_lock_owner?: string | null
+          live_lock_until?: string | null
+          live_min_volume_usd?: number
+          live_setups?: string[]
+          live_start_equity_usd?: number | null
+          live_trip_reason?: string | null
+          live_trip_streak?: number
+          live_whitelist?: string[]
+          max_entries_per_day?: number
           max_open?: number
           max_risk_pct?: number
           min_order_usd?: number
@@ -248,6 +291,8 @@ export type Database = {
           review_window_minutes?: number
           risk_pct?: number
           slip_pct?: number
+          smoke_test_passed_at?: string | null
+          smoke_test_result?: Json | null
           updated_at?: string | null
           usd_sek?: number | null
           usd_sek_updated_at?: string | null
@@ -339,6 +384,298 @@ export type Database = {
         }
         Relationships: []
       }
+      live_equity: {
+        Row: {
+          account_value_usd: number
+          expected_usd: number | null
+          id: number
+          note: string | null
+          t: string
+          unrealized_usd: number | null
+          withdrawable_usd: number | null
+        }
+        Insert: {
+          account_value_usd: number
+          expected_usd?: number | null
+          id?: number
+          note?: string | null
+          t?: string
+          unrealized_usd?: number | null
+          withdrawable_usd?: number | null
+        }
+        Update: {
+          account_value_usd?: number
+          expected_usd?: number | null
+          id?: number
+          note?: string | null
+          t?: string
+          unrealized_usd?: number | null
+          withdrawable_usd?: number | null
+        }
+        Relationships: []
+      }
+      live_fills: {
+        Row: {
+          closed_pnl: number
+          coin: string
+          dir: string | null
+          fee: number
+          fee_token: string | null
+          hash: string | null
+          network: string
+          oid: number | null
+          position_id: string | null
+          px: number
+          raw: Json | null
+          side: string
+          sz: number
+          tid: number
+          time: string
+        }
+        Insert: {
+          closed_pnl?: number
+          coin: string
+          dir?: string | null
+          fee?: number
+          fee_token?: string | null
+          hash?: string | null
+          network: string
+          oid?: number | null
+          position_id?: string | null
+          px: number
+          raw?: Json | null
+          side: string
+          sz: number
+          tid: number
+          time: string
+        }
+        Update: {
+          closed_pnl?: number
+          coin?: string
+          dir?: string | null
+          fee?: number
+          fee_token?: string | null
+          hash?: string | null
+          network?: string
+          oid?: number | null
+          position_id?: string | null
+          px?: number
+          raw?: Json | null
+          side?: string
+          sz?: number
+          tid?: number
+          time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_fills_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "live_positions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_orders: {
+        Row: {
+          cloid: string | null
+          coin: string
+          created_at: string
+          dry_run: boolean
+          error: string | null
+          id: number
+          is_buy: boolean
+          kind: string
+          network: string
+          oid: number | null
+          position_id: string | null
+          px: number | null
+          raw: Json | null
+          reduce_only: boolean
+          size: number | null
+          status: string
+          trigger_px: number | null
+        }
+        Insert: {
+          cloid?: string | null
+          coin: string
+          created_at?: string
+          dry_run?: boolean
+          error?: string | null
+          id?: number
+          is_buy: boolean
+          kind: string
+          network: string
+          oid?: number | null
+          position_id?: string | null
+          px?: number | null
+          raw?: Json | null
+          reduce_only: boolean
+          size?: number | null
+          status: string
+          trigger_px?: number | null
+        }
+        Update: {
+          cloid?: string | null
+          coin?: string
+          created_at?: string
+          dry_run?: boolean
+          error?: string | null
+          id?: number
+          is_buy?: boolean
+          kind?: string
+          network?: string
+          oid?: number | null
+          position_id?: string | null
+          px?: number | null
+          raw?: Json | null
+          reduce_only?: boolean
+          size?: number | null
+          status?: string
+          trigger_px?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_orders_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "live_positions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_positions: {
+        Row: {
+          be_moved: boolean
+          close_attempts: number
+          close_reason: string | null
+          coin: string
+          entry_px: number | null
+          entry_t: string
+          exit_px: number | null
+          exit_t: string | null
+          fees_usd: number | null
+          funding_usd: number | null
+          id: string
+          init_size: number | null
+          init_stop_px: number
+          leverage: number | null
+          net_usd: number | null
+          network: string
+          note: string | null
+          notional_usd: number | null
+          paper_position_id: string | null
+          realized_pnl_usd: number | null
+          risk_usd: number | null
+          setup: string
+          side: string
+          signal_id: string | null
+          size: number
+          sl_oid: number | null
+          status: string
+          stop_px: number
+          t1_done: boolean
+          t1_oid: number | null
+          t1_px: number | null
+          t2_oid: number | null
+          t2_px: number | null
+          updated_at: string | null
+          usd_sek_at_entry: number | null
+          usd_sek_at_exit: number | null
+        }
+        Insert: {
+          be_moved?: boolean
+          close_attempts?: number
+          close_reason?: string | null
+          coin: string
+          entry_px?: number | null
+          entry_t?: string
+          exit_px?: number | null
+          exit_t?: string | null
+          fees_usd?: number | null
+          funding_usd?: number | null
+          id?: string
+          init_size?: number | null
+          init_stop_px: number
+          leverage?: number | null
+          net_usd?: number | null
+          network: string
+          note?: string | null
+          notional_usd?: number | null
+          paper_position_id?: string | null
+          realized_pnl_usd?: number | null
+          risk_usd?: number | null
+          setup: string
+          side: string
+          signal_id?: string | null
+          size?: number
+          sl_oid?: number | null
+          status?: string
+          stop_px: number
+          t1_done?: boolean
+          t1_oid?: number | null
+          t1_px?: number | null
+          t2_oid?: number | null
+          t2_px?: number | null
+          updated_at?: string | null
+          usd_sek_at_entry?: number | null
+          usd_sek_at_exit?: number | null
+        }
+        Update: {
+          be_moved?: boolean
+          close_attempts?: number
+          close_reason?: string | null
+          coin?: string
+          entry_px?: number | null
+          entry_t?: string
+          exit_px?: number | null
+          exit_t?: string | null
+          fees_usd?: number | null
+          funding_usd?: number | null
+          id?: string
+          init_size?: number | null
+          init_stop_px?: number
+          leverage?: number | null
+          net_usd?: number | null
+          network?: string
+          note?: string | null
+          notional_usd?: number | null
+          paper_position_id?: string | null
+          realized_pnl_usd?: number | null
+          risk_usd?: number | null
+          setup?: string
+          side?: string
+          signal_id?: string | null
+          size?: number
+          sl_oid?: number | null
+          status?: string
+          stop_px?: number
+          t1_done?: boolean
+          t1_oid?: number | null
+          t1_px?: number | null
+          t2_oid?: number | null
+          t2_px?: number | null
+          updated_at?: string | null
+          usd_sek_at_entry?: number | null
+          usd_sek_at_exit?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_positions_paper_position_id_fkey"
+            columns: ["paper_position_id"]
+            isOneToOne: false
+            referencedRelation: "paper_positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_positions_signal_id_fkey"
+            columns: ["signal_id"]
+            isOneToOne: false
+            referencedRelation: "signals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       markets: {
         Row: {
           color: string | null
@@ -396,6 +733,63 @@ export type Database = {
           notified?: boolean | null
           reached_at?: string | null
           target_sek?: number
+        }
+        Relationships: []
+      }
+      mimic_trades: {
+        Row: {
+          address: string
+          closed_at: string | null
+          coin: string
+          entry_px: number
+          exit_px: number | null
+          exit_reason: string | null
+          fees_usd: number
+          id: string
+          net_pct: number | null
+          net_usd: number | null
+          notional_usd: number
+          opened_at: string
+          side: string
+          status: string
+          their_entry_px: number | null
+          their_leverage: number | null
+        }
+        Insert: {
+          address: string
+          closed_at?: string | null
+          coin: string
+          entry_px: number
+          exit_px?: number | null
+          exit_reason?: string | null
+          fees_usd?: number
+          id?: string
+          net_pct?: number | null
+          net_usd?: number | null
+          notional_usd: number
+          opened_at?: string
+          side: string
+          status?: string
+          their_entry_px?: number | null
+          their_leverage?: number | null
+        }
+        Update: {
+          address?: string
+          closed_at?: string | null
+          coin?: string
+          entry_px?: number
+          exit_px?: number | null
+          exit_reason?: string | null
+          fees_usd?: number
+          id?: string
+          net_pct?: number | null
+          net_usd?: number | null
+          notional_usd?: number
+          opened_at?: string
+          side?: string
+          status?: string
+          their_entry_px?: number | null
+          their_leverage?: number | null
         }
         Relationships: []
       }
@@ -581,6 +975,7 @@ export type Database = {
           context: Json | null
           created_at: string
           id: string
+          live_note: string | null
           ref_px: number
           regime: string | null
           review: Json | null
@@ -600,6 +995,7 @@ export type Database = {
           context?: Json | null
           created_at?: string
           id?: string
+          live_note?: string | null
           ref_px: number
           regime?: string | null
           review?: Json | null
@@ -619,6 +1015,7 @@ export type Database = {
           context?: Json | null
           created_at?: string
           id?: string
+          live_note?: string | null
           ref_px?: number
           regime?: string | null
           review?: Json | null
@@ -1101,7 +1498,27 @@ export type Database = {
       hl_backtest_data: { Args: { p_coin: string }; Returns: Json }
       hl_latest_t: { Args: { p_coin: string }; Returns: Json }
       is_owner: { Args: never; Returns: boolean }
+      live_lock: {
+        Args: { p_owner: string; p_seconds: number }
+        Returns: boolean
+      }
+      live_unlock: { Args: { p_owner: string }; Returns: undefined }
       sm_coin_hourly: { Args: { p_coin: string }; Returns: Json }
+      sm_copy_coins: {
+        Args: { p_min_trades: number }
+        Returns: {
+          coin: string
+          trades: number
+        }[]
+      }
+      sm_due_count: { Args: never; Returns: number }
+      sm_due_wallets: {
+        Args: { p_limit: number }
+        Returns: {
+          address: string
+          first_seen: string
+        }[]
+      }
       sm_invo_agg: {
         Args: { p_since: string }
         Returns: {
@@ -1134,6 +1551,7 @@ export type Database = {
           context: Json | null
           created_at: string
           id: string
+          live_note: string | null
           ref_px: number
           regime: string | null
           review: Json | null
