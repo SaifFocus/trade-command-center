@@ -6,7 +6,7 @@ import { atr, type Bar } from "@/lib/hl/engine";
 import { liquidCoins } from "./deep.server";
 import { smLog } from "./candidates.server";
 
-import { mimicStep, type TrackEvent } from "./mimic.server";
+import { mimicStep, mimicCoins, type TrackEvent } from "./mimic.server";
 
 type DB = SupabaseClient<Database>;
 type CH = {
@@ -77,8 +77,8 @@ export async function trackWatchlist(db: DB) {
   const mirror = new Set((wl ?? []).filter((w) => w.mirror).map((w) => w.address));
   let mimic: unknown = null;
   if (mirror.size || events.length) {
-    const [mids, liquid] = await Promise.all([hlInfo<Record<string, string>>({ type: "allMids" }), liquidCoins(db)]);
-    mimic = await mimicStep(db as never, events, mirror, mids, liquid);
+    const [mids, tradable] = await Promise.all([hlInfo<Record<string, string>>({ type: "allMids" }), mimicCoins(db as never)]);
+    mimic = await mimicStep(db as never, events, mirror, mids, tradable);
   }
   return { wallets: wl?.length ?? 0, mirror: mirror.size, events: events.length, signals, exits, mimic };
 }

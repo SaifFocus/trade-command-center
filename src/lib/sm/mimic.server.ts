@@ -8,6 +8,14 @@ import { MIMIC, pickMimic, mimicEntry, mimicExit, type MimicCandidate } from "./
 type DB = SupabaseClient<any, any, any>;
 export type TrackEvent = { address: string; coin: string; side: string; kind: string; entry_px?: number | null; leverage?: number | null };
 
+/** Perps the copies may trade (24h volume ≥ MIMIC.minVolumeUsd in the latest universe snapshot). */
+export async function mimicCoins(db: DB): Promise<Set<string>> {
+  const { data: snap } = await db.from("hl_universe").select("snapshot_at").order("snapshot_at", { ascending: false }).limit(1);
+  if (!snap?.[0]) return new Set();
+  const { data } = await db.from("hl_universe").select("coin").eq("snapshot_at", snap[0].snapshot_at).gte("day_ntl_vlm", MIMIC.minVolumeUsd);
+  return new Set((data ?? []).map((r) => r.coin as string));
+}
+
 export async function rebuildMimic(db: DB): Promise<number> {
   const since = new Date(Date.now() - MIMIC.activeDays * 86400_000).toISOString();
   const { data: st } = await db.from("sm_wallet_stats")

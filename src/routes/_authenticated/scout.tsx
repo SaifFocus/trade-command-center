@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { runCopyBacktestFn, syncCopyDataFn } from "@/lib/sm/scout.functions";
+import { mimicExit } from "@/lib/sm/mimic";
 
 export const Route = createFileRoute("/_authenticated/scout")({
   head: () => ({ meta: [{ title: "APEX — Scout" }, { name: "description", content: "Graded traders, live events and the copy backtest." }] }),
@@ -52,6 +53,8 @@ function ScoutPage() {
   const [jobs, setJobs] = useState<Row[]>([]);
   const [events, setEvents] = useState<Row[]>([]);
   const [mimic, setMimic] = useState<Row[]>([]);
+  const [mids, setMids] = useState<Record<string, string>>({});
+  const [updated, setUpdated] = useState<Date | null>(null);
   const [copyRun, setCopyRun] = useState<Row | null>(null);
   const [counts, setCounts] = useState<{ candidates: number; invo: number; lb: number }>({ candidates: 0, invo: 0, lb: 0 });
   const [tier, setTier] = useState<"all" | "A" | "B" | "AB" | "P">("AB");
@@ -102,7 +105,18 @@ function ScoutPage() {
     setCopyRun(((runs.data ?? []) as Row[])[0] ?? null);
     setCounts({ candidates: cand.count ?? 0, invo: invo.count ?? 0, lb: lb.count ?? 0 });
   };
-  useEffect(() => { load(); const id = setInterval(load, 60_000); return () => clearInterval(id); }, []);
+  const loadMids = async () => {
+    try {
+      const r = await fetch("https://api.hyperliquid.xyz/info", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ type: "allMids" }) });
+      if (r.ok) setMids(await r.json());
+    } catch { /* live prices are optional */ }
+  };
+  useEffect(() => {
+    const tick = async () => { await Promise.all([load(), loadMids()]); setUpdated(new Date()); };
+    tick();
+    const id = setInterval(tick, 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (!open) { setDetail(null); return; }
@@ -200,7 +214,7 @@ function ScoutPage() {
           </Panel>
         </div>
 
-        <MimicPanel rows={mimic} />
+        <MimicPanel rows={mimic} mids={mids} updated={updated} />
 
         <Panel title={`GRADED TRADERS (${shown.length})`} right={
           <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -268,9 +282,15 @@ function ScoutPage() {
   );
 }
 
-function MimicPanel({ rows }: { rows: Row[] }) {
+function MimicPanel({ rows, mids, updated }: { rows: Row[]; mids: Record<string, string>; updated: Date | null }) {
   const closed = rows.filter((r) => r.status === "closed");
   const open = rows.filter((r) => r.status === "open");
+  // Open copies marked to the live price as if closed now (after exit slippage and fee).
+  const live = (r: Row) => {
+    const m = Number(mids[r.coin]);
+    return m > 0 ? mimicExit({ side: r.side, entry_px: +r.entry_px, fees_usd: +r.fees_usd, notional_usd: +r.notional_usd }, m) : null;
+  };
+  const openNet = open.reduce((a, r) => a + (live(r)?.net ?? 0), 0);
   const wins = closed.filter((r) => +r.net_usd > 0).length;
   const net = closed.reduce((a, r) => a + +r.net_usd, 0);
   const avg = closed.length ? closed.reduce((a, r) => a + +r.net_pct, 0) / closed.length : 0;
@@ -280,6 +300,8 @@ function MimicPanel({ rows }: { rows: Row[] }) {
         Closed <span className="tabular-nums">{closed.length}</span> · win rate <span className="tabular-nums">{closed.length ? ((wins / closed.length) * 100).toFixed(1) : "—"}%</span> ·
         avg <span className={`tabular-nums ${avg >= 0 ? "text-neon" : "text-destructive"}`}>{avg.toFixed(2)}%</span> per trade ·
         total <span className={`tabular-nums ${net >= 0 ? "text-neon" : "text-destructive"}`}>${net.toFixed(2)}</span> · open <span className="tabular-nums">{open.length}</span>
+        {open.length > 0 && <> (now <span className={`tabular-nums ${openNet >= 0 ? "text-neon" : "text-destructive"}`}>${openNet.toFixed(2)}</span>)</>}
+        <span className="ml-2 text-muted-foreground">● live, updates every 30 s{updated ? ` · ${updated.toLocaleTimeString("sv-SE")}` : ""}</span>
       </div>
       {rows.length === 0 ? <div className="text-xs text-muted-foreground">No copies yet. Traders are picked once graded Invo wallets qualify (active in the last 3 days, 20+ trades, profit factor 1.2+, profitable).</div> : (
         <div className="max-h-64 overflow-y-auto"><table className="w-full text-xs">
@@ -289,8 +311,10 @@ function MimicPanel({ rows }: { rows: Row[] }) {
               <td>{new Date(r.opened_at).toLocaleString("sv-SE", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</td>
               <td className="font-mono">{String(r.address).slice(0, 6)}…{String(r.address).slice(-4)}</td><td>{r.coin}</td><td>{String(r.side).toUpperCase()}</td>
               <td className="tabular-nums">{(+r.entry_px).toPrecision(6)}</td><td className="tabular-nums">{r.their_entry_px ? (+r.their_entry_px).toPrecision(6) : "—"}</td>
-              <td className="tabular-nums">{r.exit_px ? (+r.exit_px).toPrecision(6) : "—"}</td>
-              <td className={`tabular-nums ${+(r.net_pct ?? 0) >= 0 ? "text-neon" : "text-destructive"}`}>{r.net_pct == null ? "—" : (+r.net_pct).toFixed(2)}</td>
+              <td className="tabular-nums">{r.exit_px ? (+r.exit_px).toPrecision(6) : r.status === "open" && Number(mids[r.coin]) > 0 ? `now ${Number(mids[r.coin]).toPrecision(6)}` : "—"}</td>
+              {(() => { const pct = r.status === "open" ? live(r)?.pct ?? null : r.net_pct == null ? null : +r.net_pct; return (
+                <td className={`tabular-nums ${(pct ?? 0) >= 0 ? "text-neon" : "text-destructive"}`}>{pct == null ? "—" : pct.toFixed(2)}</td>
+              ); })()}
               <td>{r.status === "open" ? "OPEN" : r.exit_reason}</td>
             </tr>
           ))}</tbody>

@@ -12,6 +12,8 @@ export const MIMIC = {
   minProfitFactor: 1.2,
   activeDays: 3,
   minLiquidShare: 50,
+  /** Coins the copies may trade: Hyperliquid perps with at least this 24h volume (a $100 copy moves nothing). */
+  minVolumeUsd: 2_000_000,
 };
 
 export type MimicCandidate = {
