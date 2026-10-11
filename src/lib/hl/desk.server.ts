@@ -26,9 +26,15 @@ async function getCfg(db: DB): Promise<CfgRow> {
   return data;
 }
 
+/** Paper sizes from paper_budget_usd when set (live keeps budget_sek as its cap). */
+function paperBudgetSek(r: CfgRow): number {
+  const fx = +(r.usd_sek ?? 0);
+  return r.paper_budget_usd != null && fx > 0 ? +r.paper_budget_usd * fx : +r.budget_sek;
+}
+
 function toCfg(r: CfgRow): DeskCfg {
   return {
-    budget_sek: +r.budget_sek, usd_sek: +(r.usd_sek ?? 0), risk_pct: +r.risk_pct, max_risk_pct: +r.max_risk_pct,
+    budget_sek: paperBudgetSek(r), usd_sek: +(r.usd_sek ?? 0), risk_pct: +r.risk_pct, max_risk_pct: +r.max_risk_pct,
     max_open: r.max_open, min_order_usd: +r.min_order_usd, fee_pct: +r.fee_pct, slip_pct: +r.slip_pct,
     daily_loss_pct: +r.daily_loss_pct, weekly_loss_pct: +r.weekly_loss_pct, kill_drawdown_pct: +r.kill_drawdown_pct,
     night_rule: r.night_rule, mode: r.mode, kill_switch: r.kill_switch,

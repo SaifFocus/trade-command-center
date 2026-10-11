@@ -550,6 +550,7 @@ export type Database = {
           live_trip_reason: string | null
           live_trip_streak: number
           live_whitelist: string[]
+          paper_budget_usd: number | null
           max_entries_per_day: number
           max_open: number
           max_risk_pct: number
@@ -587,6 +588,7 @@ export type Database = {
           live_trip_reason?: string | null
           live_trip_streak?: number
           live_whitelist?: string[]
+          paper_budget_usd?: number | null
           max_entries_per_day?: number
           max_open?: number
           max_risk_pct?: number
@@ -624,6 +626,7 @@ export type Database = {
           live_trip_reason?: string | null
           live_trip_streak?: number
           live_whitelist?: string[]
+          paper_budget_usd?: number | null
           max_entries_per_day?: number
           max_open?: number
           max_risk_pct?: number

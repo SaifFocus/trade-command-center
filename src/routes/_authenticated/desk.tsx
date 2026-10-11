@@ -74,7 +74,8 @@ function DeskPage() {
   const closed = pos.filter((p) => p.status === "closed");
   const realizedAll = real.filter((p) => p.status === "closed").reduce((a, p) => a + +(p.net_usd ?? 0), 0);
   const sumSince = (ms: number) => real.filter((p) => p.status === "closed" && p.exit_t && Date.parse(p.exit_t) >= Date.now() - ms).reduce((a, p) => a + +(p.net_usd ?? 0), 0);
-  const equity = cfg && usdSek ? +cfg.budget_sek / usdSek + realizedAll : null;
+  const paperBudget = cfg?.paper_budget_usd != null ? +cfg.paper_budget_usd : cfg && usdSek ? +cfg.budget_sek / usdSek : null;
+  const equity = paperBudget != null ? paperBudget + realizedAll : null;
   const peak = Math.max(equity ?? 0, ...eq.map((e) => +e.equity_usd));
   const dd = equity && peak ? ((peak - equity) / peak) * 100 : 0;
   const openRisk = openReal.reduce((a, p) => a + Math.max(0, (p.side === "long" ? 1 : -1) * (+p.entry_px - +p.stop_px)) * +p.size_coin * +p.remaining_frac, 0);
@@ -136,7 +137,7 @@ function DeskPage() {
             {cfg ? (
               <div className="space-y-1 text-xs">
                 <div>MODE <span className="text-neon">{cfg.mode.toUpperCase()}</span>{(cfg as { live_armed?: boolean }).live_armed ? " · LIVE ARMED" : " · NO REAL ORDERS"}</div>
-                <div>BUDGET <span className="tabular-nums">{fmt(+cfg.budget_sek, 0)} SEK</span> = <span className="tabular-nums">${usdSek ? fmt(+cfg.budget_sek / usdSek) : "—"}</span> <span className="text-muted-foreground">(USD/SEK {fmt(usdSek, 4)})</span></div>
+                <div>PAPER BUDGET <span className="tabular-nums">${fmt(paperBudget)}</span> = <span className="tabular-nums">{paperBudget != null && usdSek ? fmt(paperBudget * usdSek, 0) : "—"} SEK</span> <span className="text-muted-foreground">· LIVE CAP {fmt(+cfg.budget_sek, 0)} SEK (USD/SEK {fmt(usdSek, 4)})</span></div>
                 <div>EQUITY <span className="tabular-nums text-neon">${fmt(equity)}</span> = <span className="tabular-nums">{equity && usdSek ? fmt(equity * usdSek) : "—"} SEK</span></div>
                 <div className="text-muted-foreground">RISK {cfg.risk_pct}% (max {cfg.max_risk_pct}%) · MAX OPEN {cfg.max_open} · MIN ORDER ${cfg.min_order_usd} · FEE {cfg.fee_pct}% · SLIP {cfg.slip_pct}%</div>
                 <div className="text-muted-foreground">NIGHT RULE {cfg.night_rule ? "ON" : "OFF"} · REVIEW WINDOW {cfg.review_window_minutes} MIN</div>
