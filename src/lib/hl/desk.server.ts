@@ -2,7 +2,7 @@
 // No real orders: everything here writes only to our own paper tables.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { prep, signalsAt, regimeAt, stepPosition, lastClosedDay, type CoinData, type PosState } from "./engine";
+import { prep, signalsAt, regimeAt, stepPosition, lastClosedDay, mgmtFor, type CoinData, type PosState } from "./engine";
 import { loadCoinData } from "./backtest.server";
 import { syncAll, ALWAYS_COINS } from "./sync.server";
 import { deskCoins } from "./universe";
@@ -32,10 +32,19 @@ function paperBudgetSek(r: CfgRow): number {
   return r.paper_budget_usd != null && fx > 0 ? +r.paper_budget_usd * fx : +r.budget_sek;
 }
 
+/** Paper-only overrides (paper_*) fall back to the shared columns, which the live desk keeps using. */
+function paperRisk(r: CfgRow) {
+  return {
+    risk_pct: r.paper_risk_pct != null ? +r.paper_risk_pct : +r.risk_pct,
+    max_open: r.paper_max_open ?? r.max_open,
+    max_same_side: r.paper_max_same_side ?? null,
+  };
+}
+
 function toCfg(r: CfgRow): DeskCfg {
   return {
-    budget_sek: paperBudgetSek(r), usd_sek: +(r.usd_sek ?? 0), risk_pct: +r.risk_pct, max_risk_pct: +r.max_risk_pct,
-    max_open: r.max_open, min_order_usd: +r.min_order_usd, fee_pct: +r.fee_pct, slip_pct: +r.slip_pct,
+    budget_sek: paperBudgetSek(r), usd_sek: +(r.usd_sek ?? 0), ...paperRisk(r), max_risk_pct: +r.max_risk_pct,
+    min_order_usd: +r.min_order_usd, fee_pct: +r.fee_pct, slip_pct: +r.slip_pct,
     daily_loss_pct: +r.daily_loss_pct, weekly_loss_pct: +r.weekly_loss_pct, kill_drawdown_pct: +r.kill_drawdown_pct,
     night_rule: r.night_rule, mode: r.mode, kill_switch: r.kill_switch,
   };
@@ -83,10 +92,11 @@ async function managePositions(db: DB, data: Map<string, CoinData>, cfg: DeskCfg
     const wasT1 = st.t1hit;
     let ex: { px: number; reason: string } | null = null;
     let lastBar = lastT;
+    const m = mgmtFor(pos.setup);
     for (const b of bars) {
       lastBar = b.t;
       ex = stepPosition(st, b, cd.f4h.get(b.t)?.s ?? 0, costRate,
-        pos.setup === "smart_money_follow" ? { timeStop: Infinity, maxHold: 84 } : undefined);
+        pos.setup === "smart_money_follow" ? { timeStop: Infinity, maxHold: 84 } : m, m);
       if (ex) break;
     }
     const upd: Database["public"]["Tables"]["paper_positions"]["Update"] = {
@@ -99,7 +109,7 @@ async function managePositions(db: DB, data: Map<string, CoinData>, cfg: DeskCfg
       Object.assign(upd, { status: "closed", exit_t: new Date(lastBar + H4).toISOString(), exit_px: ex.px, exit_reason: ex.reason, net_usd: netR * k, net_r: netR });
       await log(db, `${tag} closed (${ex.reason}) @ ${ex.px.toPrecision(6)} · ${netR >= 0 ? "+" : ""}${netR.toFixed(2)}R / $${(netR * k).toFixed(2)}`, netR >= 0 ? "SUCCESS" : "WARN");
     } else if (!wasT1 && st.t1hit) {
-      await log(db, `${tag} T1 hit — half closed, stop moved to break-even`);
+      await log(db, `${tag} T1 hit — ${Math.round(m.t1Frac * 100)}% closed${m.beAfterT1 ? ", stop moved to break-even" : ", stop unchanged"}`);
     }
     const { error: e } = await db.from("paper_positions").update(upd).eq("id", pos.id);
     if (e) throw new Error(`paper_positions update: ${e.message}`);
@@ -130,6 +140,7 @@ async function generateSignals(db: DB, coins: CoinData[], cfg: CfgRow) {
     ? new Set(deskCoins(Array.from(uni.values()).map((r) => ({ coin: r.coin, day_ntl_vlm: Number(r.day_ntl_vlm ?? 0) })), ALWAYS_COINS, cfg.paper_extra_coins ?? []))
     : null;
   const created: string[] = [];
+  const enabled = new Set(cfg.enabled_setups);
   for (const coin of Array.from(preps.keys()).sort()) {
     if (allowed && !allowed.has(coin)) continue;
     const p = preps.get(coin)!;
@@ -138,7 +149,7 @@ async function generateSignals(db: DB, coins: CoinData[], cfg: CfgRow) {
     // Replay the last 6 days so breakout levels already consumed are marked used, as in the backtest.
     let sig = null;
     for (let i = Math.max(0, n - 37); i < n; i++) {
-      const s = signalsAt(p, i, regimeAt(btc, p.c4h[i].t));
+      const s = signalsAt(p, i, regimeAt(btc, p.c4h[i].t), enabled);
       if (i === n - 1) sig = s;
     }
     if (!sig || !cfg.enabled_setups.includes(sig.setup)) continue;
@@ -149,15 +160,16 @@ async function generateSignals(db: DB, coins: CoinData[], cfg: CfgRow) {
     const ref = b.c;
     const R = Math.abs(ref - sig.stop);
     const dir = sig.side === "long" ? 1 : -1;
-    if (!dATR || dir * (ref - sig.stop) <= 0 || R < dATR || R > 3 * dATR) {
-      await log(db, `${coin} ${sig.setup} signal skipped: stop distance outside 1–3× daily ATR`);
+    const m = mgmtFor(sig.setup);
+    if (!dATR || dir * (ref - sig.stop) <= 0 || R < m.rBand[0] * dATR || R > m.rBand[1] * dATR) {
+      await log(db, `${coin} ${sig.setup} signal skipped: stop distance outside ${m.rBand[0]}–${m.rBand[1]}× daily ATR`);
       continue;
     }
     const riskOn = regimeAt(btc, b.t);
     const u = uni.get(coin);
     const { error } = await db.from("signals").insert({
       coin, setup: sig.setup, side: sig.side, signal_bar_t: new Date(b.t).toISOString(),
-      ref_px: ref, stop_px: sig.stop, t1_px: ref + dir * 1.5 * R, t2_px: ref + dir * 3 * R, stop_dist_pct: R / ref,
+      ref_px: ref, stop_px: sig.stop, t1_px: ref + dir * m.t1R * R, t2_px: ref + dir * m.t2R * R, stop_dist_pct: R / ref,
       regime: riskOn == null ? "unknown" : riskOn ? "risk_on" : "risk_off",
       context: {
         funding_24h: p.fund24[i], open_interest: u?.open_interest ?? null, day_ntl_vlm: u?.day_ntl_vlm ?? null, mark_px: u?.mark_px ?? null,
@@ -248,7 +260,7 @@ export async function runExecute(db: DB) {
     if (shadowed.has(s.id)) continue;
     const mark = Number(mids[s.coin]);
     if (!(mark > 0)) continue;
-    const z = sizePosition(cfg, s.coin, s.side as "long" | "short", mark, +s.stop_px, equity, 0, true);
+    const z = sizePosition(cfg, s.coin, s.side as "long" | "short", mark, +s.stop_px, equity, 0, true, mgmtFor(s.setup));
     if (!z.ok) { await log(db, `[SHADOW] ${s.coin} ${s.setup} not opened: ${z.reason}`, "WARN"); continue; }
     await insertPosition(db, s, z, true, now, cfg, "vetoed");
     out.shadow.push(s.coin);
@@ -257,9 +269,9 @@ export async function runExecute(db: DB) {
 
   // Approved -> risk manager -> real paper position
   const { data: approved } = await db.from("signals").select("*").eq("status", "approved").order("created_at").order("coin");
-  const { data: openReal } = await db.from("paper_positions").select("margin_usd").eq("status", "open").eq("shadow", false);
+  const { data: openReal } = await db.from("paper_positions").select("margin_usd,side").eq("status", "open").eq("shadow", false);
   const { data: peakRow } = await db.from("paper_equity").select("equity_usd").order("equity_usd", { ascending: false }).limit(1);
-  const open_real = (openReal ?? []).map((p) => ({ margin_usd: +p.margin_usd }));
+  const open_real = (openReal ?? []).map((p) => ({ margin_usd: +p.margin_usd, side: p.side as "long" | "short" }));
   for (const s of approved ?? []) {
     const mark = Number(mids[s.coin]);
     const res = !(mark > 0)
@@ -268,6 +280,7 @@ export async function runExecute(db: DB) {
           cfg, now, coin: s.coin, side: s.side as "long" | "short", ref_px: +s.ref_px, stop_px: +s.stop_px, mark,
           crowding_flag: (s.review as any)?.crowding_flag === true, open_real,
           realized_net_usd: r.all, day_net_usd: r.day, week_net_usd: r.week, peak_equity_usd: +(peakRow?.[0]?.equity_usd ?? 0),
+          targets: mgmtFor(s.setup),
         });
     if (!res.ok) {
       await db.from("signals").update({ status: "rejected_by_risk", risk_note: res.reason }).eq("id", s.id);
@@ -276,7 +289,7 @@ export async function runExecute(db: DB) {
       await log(db, `RISK REJECTED ${s.coin} ${s.setup}: ${res.reason}`, "WARN");
       // Track the blocked trade as a shadow too, so every reviewed signal gets an outcome to learn from.
       if (mark > 0) {
-        const z = sizePosition(cfg, s.coin, s.side as "long" | "short", mark, +s.stop_px, equity, 0, true);
+        const z = sizePosition(cfg, s.coin, s.side as "long" | "short", mark, +s.stop_px, equity, 0, true, mgmtFor(s.setup));
         if (z.ok) {
           await insertPosition(db, s, z, true, now, cfg, "risk");
           await log(db, `[SHADOW] ${s.coin} ${s.side.toUpperCase()} ${s.setup} opened @ ${z.entry.toPrecision(6)} (blocked by risk rules, tracked for comparison)`);
@@ -286,7 +299,7 @@ export async function runExecute(db: DB) {
     }
     const paperId = await insertPosition(db, s, res, false, now, cfg, null);
     await db.from("signals").update({ status: "executed" }).eq("id", s.id);
-    open_real.push({ margin_usd: res.margin_usd });
+    open_real.push({ margin_usd: res.margin_usd, side: s.side as "long" | "short" });
     out.executed.push(s.coin);
     // Live desk: real orders follow every paper fill while live mode is armed (see src/lib/live).
     if ((cfgRow as { live_armed?: boolean }).live_armed && !cfg.kill_switch) {

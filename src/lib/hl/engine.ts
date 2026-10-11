@@ -1,8 +1,21 @@
 // Deterministic swing backtest engine. Pure (no I/O). Results in R-multiples.
 export type Bar = { t: number; o: number; h: number; l: number; c: number; v: number };
 export type CoinData = { coin: string; c4h: Bar[]; c1d: Bar[]; f4h: Map<number, { s: number; n: number }> };
-export type Params = { name: string; feePct: number; slipPct: number };
-export type Setup = "pullback_long" | "breakout_retest_long" | "breakdown_retest_short" | "crowded_long_squeeze_short";
+/** `setups` limits which engine setups may signal (all when omitted); `maxOpen` caps concurrent positions (default 4). */
+export type Params = { name: string; feePct: number; slipPct: number; setups?: string[]; maxOpen?: number };
+export type Setup = "pullback_long" | "breakout_retest_long" | "breakdown_retest_short" | "crowded_long_squeeze_short" | "volume_breakout";
+
+/** volume_breakout rules (4H bars): close beyond the prior 3-day range on 2x average volume, in the coin's own trend. */
+export const VB = { channel: 18, volLookback: 48, volMult: 2, trendEma: 200, stopAtr: 3 } as const;
+
+/** Trade management per setup. R band = allowed stop distance in daily ATRs. */
+export type Mgmt = { t1R: number; t2R: number; t1Frac: number; beAfterT1: boolean; timeStop: number; maxHold: number; rBand: [number, number] };
+export const DEFAULT_MGMT: Mgmt = { t1R: 1.5, t2R: 3, t1Frac: 0.5, beAfterT1: true, timeStop: 42, maxHold: 84, rBand: [1, 3] };
+/** volume_breakout: half off at +1R with the stop left where it is, the rest at +4R or after 7 days (42 bars). */
+export const MGMT: Partial<Record<string, Mgmt>> = {
+  volume_breakout: { t1R: 1, t2R: 4, t1Frac: 0.5, beAfterT1: false, timeStop: 42, maxHold: 42, rBand: [0.3, 5] },
+};
+export const mgmtFor = (setup: string): Mgmt => MGMT[setup] ?? DEFAULT_MGMT;
 
 export type BtTrade = {
   coin: string; setup: Setup; side: "long" | "short"; sample: "in" | "out";
@@ -75,6 +88,7 @@ function percentile(vals: number[], p: number) {
 export type Prep = {
   coin: string; c4h: Bar[]; idx: Map<number, number>; d: Daily;
   ema20: (number | null)[]; ema50: (number | null)[]; atr4: (number | null)[];
+  ema200: (number | null)[]; hhN: (number | null)[]; llN: (number | null)[]; vavg: (number | null)[];
   fund4: number[]; fund24: (number | null)[];
   levelsLong: { level: number; from: number; to: number; used: boolean }[];
   levelsShort: { level: number; from: number; to: number; used: boolean }[];
@@ -101,15 +115,33 @@ export function prep(cd: CoinData): Prep {
     if (d.hh30[i] != null && b.c > d.hh30[i]! && b.v >= 1.5 * av) levelsLong.push({ level: d.hh30[i]!, from, to, used: false });
     if (d.ll30[i] != null && b.c < d.ll30[i]! && b.v >= 1.5 * av) levelsShort.push({ level: d.ll30[i]!, from, to, used: false });
   });
+  // Prior-bar windows for volume_breakout (the signal bar itself is excluded).
+  const n4 = c4h.length;
+  const hhN: (number | null)[] = new Array(n4).fill(null);
+  const llN: (number | null)[] = new Array(n4).fill(null);
+  const vavg: (number | null)[] = new Array(n4).fill(null);
+  for (let i = VB.channel; i < n4; i++) {
+    let hi = -Infinity, lo = Infinity;
+    for (let j = i - VB.channel; j < i; j++) { hi = Math.max(hi, c4h[j].h); lo = Math.min(lo, c4h[j].l); }
+    hhN[i] = hi; llN[i] = lo;
+  }
+  let vs = 0;
+  for (let i = 0; i < n4; i++) {
+    if (i >= VB.volLookback) vavg[i] = vs / VB.volLookback;
+    vs += c4h[i].v;
+    if (i >= VB.volLookback) vs -= c4h[i - VB.volLookback].v;
+  }
   return {
     coin: cd.coin, c4h, idx: new Map(c4h.map((b, i) => [b.t, i])), d,
     ema20: ema(closes, 20), ema50: ema(closes, 50), atr4: atr(c4h, 14), fund4, fund24, levelsLong, levelsShort,
+    ema200: ema(closes, VB.trendEma), hhN, llN, vavg,
   };
 }
 
 export type Signal = { coin: string; setup: Setup; side: "long" | "short"; stop: number };
 
-export function signalsAt(p: Prep, i: number, riskOn: boolean | null): Signal | null {
+/** First candidate whose setup is enabled (all setups when `enabled` is omitted). Levels are consumed either way. */
+export function signalsAt(p: Prep, i: number, riskOn: boolean | null, enabled?: ReadonlySet<string>): Signal | null {
   const b = p.c4h[i];
   const T = b.t + H4;
   const dd = lastClosedDay(p.d.bars, T);
@@ -162,7 +194,14 @@ export function signalsAt(p: Prep, i: number, riskOn: boolean | null): Signal | 
       cands.push({ coin: p.coin, setup: "crowded_long_squeeze_short", side: "short", stop: hh + 0.5 * dATR });
     }
   }
-  return cands[0] ?? null;
+  // E volume_breakout (any regime): close beyond the prior 18-bar range on > 2x the 48-bar average volume, on the side
+  // of the coin's 4H EMA200; stop 3 x 4H ATR from the close.
+  const chHi = p.hhN[i], chLo = p.llN[i], va = p.vavg[i], e200 = p.ema200[i];
+  if (chHi != null && chLo != null && va != null && va > 0 && e200 != null && a4 != null && b.v > VB.volMult * va) {
+    if (b.c > chHi && b.c > e200) cands.push({ coin: p.coin, setup: "volume_breakout", side: "long", stop: b.c - VB.stopAtr * a4 });
+    else if (b.c < chLo && b.c < e200) cands.push({ coin: p.coin, setup: "volume_breakout", side: "short", stop: b.c + VB.stopAtr * a4 });
+  }
+  return cands.find((c) => !enabled || enabled.has(c.setup)) ?? null;
 }
 
 /** Regime for a 4H bar opening at T: risk-on when BTC's last closed daily close > daily EMA200. */
@@ -188,6 +227,7 @@ export function closeFrac(p: PosState, frac: number, px: number, costRate: numbe
 export function stepPosition(
   p: PosState, b: Bar, fund4: number, costRate: number,
   limits: { timeStop: number; maxHold: number } = { timeStop: 42, maxHold: 84 },
+  mgmt: { t1Frac: number; beAfterT1: boolean } = { t1Frac: 0.5, beAfterT1: true },
 ): { px: number; reason: string } | null {
   const exit = (px: number, reason: string) => { closeFrac(p, p.remaining, px, costRate); return { px, reason }; };
   p.bars++;
@@ -197,16 +237,19 @@ export function stepPosition(
     if (hitStop) return exit(p.stop, "stop");
     const hitT1 = p.dir === 1 ? b.h >= p.t1 : b.l <= p.t1;
     if (hitT1) {
-      closeFrac(p, 0.5, p.t1, costRate);
+      if (mgmt.t1Frac >= 1) return exit(p.t1, "t1");
+      closeFrac(p, mgmt.t1Frac, p.t1, costRate);
       p.t1hit = true;
-      p.stop = p.entry;
-      const beHit = p.dir === 1 ? b.l <= p.entry : b.h >= p.entry;
-      if (beHit) return exit(p.entry, "breakeven");
+      if (mgmt.beAfterT1) {
+        p.stop = p.entry;
+        const beHit = p.dir === 1 ? b.l <= p.entry : b.h >= p.entry;
+        if (beHit) return exit(p.entry, "breakeven");
+      }
       const hitT2 = p.dir === 1 ? b.h >= p.t2 : b.l <= p.t2;
       if (hitT2) return exit(p.t2, "t2");
     }
   } else {
-    if (hitStop) return exit(p.stop, "breakeven");
+    if (hitStop) return exit(p.stop, p.stop === p.entry ? "breakeven" : "stop");
     const hitT2 = p.dir === 1 ? b.h >= p.t2 : b.l <= p.t2;
     if (hitT2) return exit(p.t2, "t2");
   }
@@ -227,6 +270,7 @@ export function runBacktest(coins: CoinData[], params: Params, btcCoin = "BTC", 
   const splitT = startT + 0.6 * (endT - startT);
   const costRate = (params.feePct + params.slipPct) / 100;
   const coinNames = Array.from(preps.keys()).filter((c) => !tradeCoins || tradeCoins.has(c)).sort();
+  const enabled = params.setups ? new Set(params.setups) : undefined;
 
   const open = new Map<string, Pos>();
   let pending: Signal[] = [];
@@ -254,11 +298,12 @@ export function runBacktest(coins: CoinData[], params: Params, btcCoin = "BTC", 
       const R = Math.abs(entry - s.stop);
       const dd = lastClosedDay(p.d.bars, T);
       const dATR = dd >= 0 ? p.d.atr[dd] : null;
-      if (!dATR || R < dATR || R > 3 * dATR) continue;
+      const m = mgmtFor(s.setup);
+      if (!dATR || R < m.rBand[0] * dATR || R > m.rBand[1] * dATR) continue;
       if ((s.side === "long" && s.stop >= entry) || (s.side === "short" && s.stop <= entry)) continue;
       const dir = s.side === "long" ? 1 : -1;
       open.set(s.coin, {
-        sig: s, coin: s.coin, entryIdx: i, entry, stop: s.stop, R, t1: entry + dir * 1.5 * R, t2: entry + dir * 3 * R,
+        sig: s, coin: s.coin, entryIdx: i, entry, stop: s.stop, R, t1: entry + dir * m.t1R * R, t2: entry + dir * m.t2R * R,
         dir, t1hit: false, remaining: 1, gross: 0, fee: (costRate * entry) / R, funding: 0, bars: 0, entry_t: T,
       });
     }
@@ -269,19 +314,20 @@ export function runBacktest(coins: CoinData[], params: Params, btcCoin = "BTC", 
       const p = preps.get(pos.coin)!;
       const i = p.idx.get(T);
       if (i == null) continue;
-      const ex = stepPosition(pos, p.c4h[i], p.fund4[i], costRate);
+      const m = mgmtFor(pos.sig.setup);
+      const ex = stepPosition(pos, p.c4h[i], p.fund4[i], costRate, m, m);
       if (ex) finish(pos, T, ex.px, ex.reason, true);
     }
 
     // 3) signals at this bar's close (entries next bar)
     const riskOn = regimeAt(btc, T);
     for (const coin of coinNames) {
-      if (open.size + pending.length >= 4) break;
+      if (open.size + pending.length >= (params.maxOpen ?? 4)) break;
       if (open.has(coin)) continue;
       const p = preps.get(coin)!;
       const i = p.idx.get(T);
       if (i == null) continue;
-      const s = signalsAt(p, i, riskOn);
+      const s = signalsAt(p, i, riskOn, enabled);
       if (s) pending.push(s);
     }
   }
@@ -336,7 +382,7 @@ export function equitySim(ts: BtTrade[], riskPct = 0.01) {
 }
 
 export function summarize(ts: BtTrade[]) {
-  const setups: Setup[] = ["pullback_long", "breakout_retest_long", "breakdown_retest_short", "crowded_long_squeeze_short"];
+  const setups: Setup[] = ["pullback_long", "breakout_retest_long", "breakdown_retest_short", "crowded_long_squeeze_short", "volume_breakout"];
   const by_setup_sample: Record<string, ReturnType<typeof stats>> = {};
   for (const s of setups) for (const smp of ["in", "out"] as const)
     by_setup_sample[`${s}:${smp}`] = stats(ts.filter((t) => t.setup === s && t.sample === smp));

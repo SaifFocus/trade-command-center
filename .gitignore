@@ -30,3 +30,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+research/strategy-lab/data/
+research/strategy-lab/__pycache__/
+research/strategy-lab/*.pkl
+research/strategy-lab/*.json

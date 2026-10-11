@@ -21,6 +21,13 @@ describe("paper desk risk rules", () => {
   it("rejects at max_open 2", () => {
     expect(reason({ open_real: [{ margin_usd: 1 }, { margin_usd: 1 }] })).toMatch(/max open/);
   });
+  it("caps open positions on the same side", () => {
+    const c = { ...cfg, max_open: 6, max_same_side: 2 };
+    const two = [{ margin_usd: 1, side: "long" as const }, { margin_usd: 1, side: "long" as const }];
+    expect(reason({ cfg: c, open_real: two })).toMatch(/max 2 open long/);
+    expect(reason({ cfg: c, open_real: two, side: "short", stop_px: 110 })).toBe("ok");
+    expect(reason({ cfg: { ...c, max_same_side: null }, open_real: two })).toBe("ok");
+  });
   it("daily loss 3% blocks", () => {
     expect(reason({ realized_net_usd: -1.8, day_net_usd: -1.8 })).toMatch(/daily/); // 1.8 >= 3% of 58.2
   });

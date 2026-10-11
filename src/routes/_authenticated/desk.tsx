@@ -139,7 +139,8 @@ function DeskPage() {
                 <div>MODE <span className="text-neon">{cfg.mode.toUpperCase()}</span>{(cfg as { live_armed?: boolean }).live_armed ? " · LIVE ARMED" : " · NO REAL ORDERS"}</div>
                 <div>PAPER BUDGET <span className="tabular-nums">${fmt(paperBudget)}</span> = <span className="tabular-nums">{paperBudget != null && usdSek ? fmt(paperBudget * usdSek, 0) : "—"} SEK</span> <span className="text-muted-foreground">· LIVE CAP {fmt(+cfg.budget_sek, 0)} SEK (USD/SEK {fmt(usdSek, 4)})</span></div>
                 <div>EQUITY <span className="tabular-nums text-neon">${fmt(equity)}</span> = <span className="tabular-nums">{equity && usdSek ? fmt(equity * usdSek) : "—"} SEK</span></div>
-                <div className="text-muted-foreground">RISK {cfg.risk_pct}% (max {cfg.max_risk_pct}%) · MAX OPEN {cfg.max_open} · MIN ORDER ${cfg.min_order_usd} · FEE {cfg.fee_pct}% · SLIP {cfg.slip_pct}%</div>
+                <div className="text-muted-foreground">PAPER RISK {cfg.paper_risk_pct ?? cfg.risk_pct}% (max {cfg.max_risk_pct}%) · MAX OPEN {cfg.paper_max_open ?? cfg.max_open}{cfg.paper_max_same_side != null ? ` (≤${cfg.paper_max_same_side} per side)` : ""} · MIN ORDER ${cfg.min_order_usd} · FEE {cfg.fee_pct}% · SLIP {cfg.slip_pct}%</div>
+                {(cfg.paper_risk_pct != null || cfg.paper_max_open != null) && <div className="text-muted-foreground">LIVE RULES RISK {cfg.risk_pct}% · MAX OPEN {cfg.max_open}</div>}
                 <div className="text-muted-foreground">NIGHT RULE {cfg.night_rule ? "ON" : "OFF"} · REVIEW WINDOW {cfg.review_window_minutes} MIN</div>
                 <div className="text-muted-foreground">SETUPS {cfg.enabled_setups.join(", ")}</div>
                 <div className="text-muted-foreground">COINS top 20 by volume{cfg.paper_extra_coins?.length ? ` + ${cfg.paper_extra_coins.length} checked extras (${cfg.paper_extra_coins.join(", ")})` : " (extra coins: universe check pending or not passed)"}</div>
