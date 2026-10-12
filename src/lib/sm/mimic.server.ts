@@ -1,5 +1,5 @@
-// Mimic simulator I/O (see mimic.ts). Picks the mirrored wallets after each deep-dive batch and opens/closes
-// $100 virtual copies from the position changes trackWatchlist sees every 5 minutes. Paper only.
+// Mimic simulator I/O (see mimic.ts). Picks the mirrored wallets after each deep-dive batch (plus every owner-scouted
+// Invo trader) and opens/closes $100 virtual copies from the position changes trackWatchlist sees every 5 minutes. Paper only.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { MIMIC, pickMimic, mimicEntry, mimicExit, type MimicCandidate } from "./mimic";
 
@@ -40,6 +40,9 @@ export async function rebuildMimic(db: DB): Promise<number> {
     const { data: cur } = await db.from("sm_scores").select("address").eq("mirror", true);
     pick = pickMimic(cands, Date.now(), MIMIC.slots, new Set((cur ?? []).map((r) => r.address as string)));
   }
+  // Owner-scouted Invo traders are always copied, on top of the regular slots.
+  const { scoutedAddresses } = await import("./deep.server");
+  for (const a of await scoutedAddresses(db as never)) if (!pick.includes(a)) pick.push(a);
   const { data: now } = await db.from("sm_scores").select("address").eq("mirror", true);
   const was = new Set((now ?? []).map((r) => r.address as string));
   const drop = Array.from(was).filter((a) => !pick.includes(a));

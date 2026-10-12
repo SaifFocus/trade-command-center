@@ -137,6 +137,8 @@ export async function processQueue(db: DB, budgetMs = 230_000) {
 }
 
 export const PRACTICE_SLOTS = 20;
+/** Owner-scouted Invo traders (sm_wallets.sources contains 'invo_scout'), followed on paper outside the 20 practice slots. */
+export const SCOUT_SLOTS = 20;
 const practiceOk = (f: unknown) => {
   const x = (f ?? {}) as Record<string, boolean>;
   return !!(x.swing_hold && x.recent && x.leverage_liq && x.liquid);
@@ -162,6 +164,8 @@ export async function rebuildWatchlist(db: DB) {
   const top = new Set(ranked.slice(0, 30).map((r) => r.address));
   const practice = practicePool.filter((r) => !top.has(r.address))
     .sort((a, b) => penal(a.address) - penal(b.address) || +b.score - +a.score).slice(0, PRACTICE_SLOTS).map((r) => r.address);
+  // Scouted Invo traders: always watched (practice, paper only) unless they already made the full bar.
+  for (const a of await scoutedAddresses(db)) if (!top.has(a) && !practice.includes(a)) practice.push(a);
   // Flip only what changed, so the tracker never sees a moment with the flags all off (it would drop and re-read
   // every position as new).
   const { data: cur } = await db.from("sm_scores").select("address,practice").eq("watchlist", true);
@@ -177,6 +181,17 @@ export async function rebuildWatchlist(db: DB) {
   // Wallets no longer tracked get a fresh baseline if they come back (see trackWatchlist).
   await db.from("sm_scores").update({ tracked_at: null }).eq("watchlist", false).eq("mirror", false).not("tracked_at", "is", null);
   return top.size;
+}
+
+/** Scouted wallets that have an sm_scores row (the flags live there), newest first, capped at SCOUT_SLOTS. */
+export async function scoutedAddresses(db: DB): Promise<string[]> {
+  const { data: ws } = await db.from("sm_wallets").select("address").contains("sources", ["invo_scout"])
+    .order("first_seen", { ascending: false }).limit(SCOUT_SLOTS);
+  const addrs = (ws ?? []).map((w) => w.address);
+  if (!addrs.length) return [];
+  const { data: sc } = await db.from("sm_scores").select("address").in("address", addrs);
+  const has = new Set((sc ?? []).map((s) => s.address));
+  return addrs.filter((a) => has.has(a));
 }
 
 export type { SmTrade };

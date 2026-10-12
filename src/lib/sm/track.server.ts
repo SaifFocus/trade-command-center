@@ -9,6 +9,8 @@ import { smLog } from "./candidates.server";
 import { mimicStep, mimicCoins, type TrackEvent } from "./mimic.server";
 
 type DB = SupabaseClient<Database>;
+/** Minimum position size (share of account value) for a scouted Invo trader's open to become a follow signal. */
+export const SCOUT_MIN_FRAC = 0.005;
 type CH = {
   marginSummary: { accountValue: string };
   assetPositions: { position: { coin: string; szi: string; entryPx: string | null; positionValue: string; leverage?: { value: number } } }[];
@@ -100,10 +102,13 @@ async function followSignals(db: DB) {
   const sm = new Map((scores ?? []).map((s) => [s.address, s]));
   const created: string[] = [];
   const mids = await hlInfo<Record<string, string>>({ type: "allMids" });
+  // Owner-scouted Invo traders: large accounts that size positions at 1-2% of equity, so their floor is lower.
+  const { data: scoutRows } = await db.from("sm_wallets").select("address,display_name").contains("sources", ["invo_scout"]);
+  const scouted = new Map((scoutRows ?? []).map((w) => [w.address, w.display_name]));
   for (const e of evs) {
     const key = `${e.coin}|${e.side}`;
     if (!liquid.has(e.coin) || created.some((c) => c.startsWith(e.coin + " "))) continue;
-    if ((e.notional_frac ?? 0) < 0.02) continue;
+    if ((e.notional_frac ?? 0) < (scouted.has(e.address) ? SCOUT_MIN_FRAC : 0.02)) continue;
     const src = sm.get(e.address);
     const { data: holders } = await db.from("sm_positions").select("*").eq("coin", e.coin).eq("side", e.side);
     // Consensus counts only full-bar wallets; practice wallets never make a real follow signal.
@@ -113,7 +118,7 @@ async function followSignals(db: DB) {
     const practice = !real && practiceOn && !!src; // any other watchlist open: paper-only practice follow
     if (!real && !practice) continue;
     const setup = real ? "smart_money_follow" : "practice_follow";
-    const trigger = real ? (tierA ? "tier_a_open" : "consensus") : "practice_open";
+    const trigger = real ? (tierA ? "tier_a_open" : "consensus") : scouted.has(e.address) ? "invo_scout_open" : "practice_open";
     const [{ data: openSig }, { data: openPos }] = await Promise.all([
       db.from("signals").select("id").eq("coin", e.coin).in("status", ["new", "approved"]).limit(1),
       db.from("paper_positions").select("id").eq("coin", e.coin).eq("status", "open").eq("shadow", false).limit(1),
@@ -132,7 +137,7 @@ async function followSignals(db: DB) {
     const wallets = walletAddrs.map((a) => {
       const st = wss?.find((x) => x.address === a), wv = wws?.find((x) => x.address === a), sc = sm.get(a), h = holders?.find((x) => x.address === a);
       return { address: a, source: wv?.sources ?? [], tier: sc?.practice ? "practice" : sc?.tier, score: sc?.score, win_rate: st?.win_rate, profit_factor: st?.profit_factor,
-        median_hold_h: st?.median_hold_h, entry_px: h?.entry_px ?? e.entry_px };
+        median_hold_h: st?.median_hold_h, entry_px: h?.entry_px ?? e.entry_px, invo_user: scouted.get(a) ?? null };
     });
     const { error } = await db.from("signals").insert({
       coin: e.coin, setup, side: e.side, signal_bar_t: e.t, ref_px: mark, stop_px: mark - dir * R,
@@ -141,7 +146,7 @@ async function followSignals(db: DB) {
     });
     if (error) { await smLog(db, `follow signal insert failed: ${error.message}`, "ERROR"); continue; }
     created.push(`${e.coin} ${e.side}`);
-    await smLog(db, `NEW SIGNAL ${e.coin} ${e.side.toUpperCase()} ${setup} (${real ? (tierA ? "tier A open" : `${near.length} wallets`) : "practice: one watched wallet below the full bar"}) @ ${mark} — awaiting review`, "SIGNAL");
+    await smLog(db, `NEW SIGNAL ${e.coin} ${e.side.toUpperCase()} ${setup} (${real ? (tierA ? "tier A open" : `${near.length} wallets`) : scouted.has(e.address) ? `practice: scouted Invo trader ${scouted.get(e.address) ?? e.address.slice(0, 8)}` : "practice: one watched wallet below the full bar"}) @ ${mark} — awaiting review`, "SIGNAL");
     void key;
   }
   return created;
