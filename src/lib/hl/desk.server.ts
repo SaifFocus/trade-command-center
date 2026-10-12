@@ -273,6 +273,13 @@ export async function runExecute(db: DB) {
   const { data: peakRow } = await db.from("paper_equity").select("equity_usd").order("equity_usd", { ascending: false }).limit(1);
   const open_real = (openReal ?? []).map((p) => ({ margin_usd: +p.margin_usd, side: p.side as "long" | "short" }));
   for (const s of approved ?? []) {
+    // A follow trade exists only while a followed wallet holds the position; after the review delay they may have exited
+    // (followExits would close the copy two minutes later, paying fees for nothing).
+    if ((s.setup === "smart_money_follow" || s.setup === "practice_follow") && !(await followStillOpen(db, s))) {
+      await db.from("signals").update({ status: "expired", risk_note: "followed wallets exited before execution" }).eq("id", s.id);
+      await log(db, `Signal ${s.coin} ${s.setup} expired: the followed wallets exited before execution`);
+      continue;
+    }
     const mark = Number(mids[s.coin]);
     const res = !(mark > 0)
       ? { ok: false as const, reason: "no mark price" }
@@ -312,6 +319,14 @@ export async function runExecute(db: DB) {
   await snapshot(db, { ...cfgRow, kill_switch: cfg.kill_switch }, "execute");
   await log(db, `Execute done · ${out.expired} expired · ${out.shadow.length} shadow · ${out.executed.length} filled · ${out.rejected.length} rejected · ${out.live.length} live`);
   return out;
+}
+
+/** True when at least one wallet in the follow signal still holds the coin on the same side (sm_positions, 5-min tracker). */
+async function followStillOpen(db: DB, s: { coin: string; side: string; context?: unknown }): Promise<boolean> {
+  const ws = (((s.context as { wallets?: { address: string }[] } | null)?.wallets) ?? []).map((w) => w.address);
+  if (!ws.length) return true;
+  const { data } = await db.from("sm_positions").select("address").eq("coin", s.coin).eq("side", s.side).in("address", ws).limit(1);
+  return !!data?.length;
 }
 
 /** Reviewer's confidence (0–100) that the trade reaches T1 before its stop, from submit_review. */
