@@ -42,12 +42,20 @@ export async function verifyBridge(request: Request) {
   return data?.value && data.value === hash ? (supabaseAdmin as DB) : null;
 }
 
+/** Pages the bridge opens about once a day for the weekly re-scout; their raw responses are kept in invo_bridge_raw. */
+export const SCOUT_PAGES = [{ id: "scout:leaderboard", username: "", url: "https://app.invoapp.com/leaderboard" }];
+
 export async function bridgeTargets(db: DB) {
   const { data } = await db.from("sm_wallets").select("address,display_name").contains("sources", ["invo_bridge"]);
   const targets = (data ?? []).filter((w) => w.address.startsWith(PSEUDO)).map((w) => {
     const id = w.address.slice(PSEUDO.length);
     return { id, username: usernameOf(w.display_name), url: portfolioUrl(id) };
   });
+  const { data: seen } = await raw(db).from("invo_bridge_raw").select("portfolio_id,at").in("portfolio_id", SCOUT_PAGES.map((s) => s.id));
+  for (const s of SCOUT_PAGES) {
+    const at = (seen ?? []).find((r: { portfolio_id: string }) => r.portfolio_id === s.id)?.at;
+    if (!at || Date.now() - Date.parse(at) > 20 * 3600_000) targets.push(s);
+  }
   return {
     targets, capture_hosts: BRIDGE.captureHosts, cycle_seconds: BRIDGE.cycleSeconds, settle_ms: BRIDGE.settleMs,
     max_body_bytes: BRIDGE.maxBodyBytes, home_url: BRIDGE.homeUrl,
@@ -82,6 +90,12 @@ export async function ingestInvoBridge(db: DB, p: BridgePayload) {
   const nowIso = new Date().toISOString();
 
   for (const r of p.results ?? []) {
+    if (SCOUT_PAGES.some((s) => s.id === r.id)) {
+      // Re-scout material: stored as captured, read by the weekly "APEX Invo re-scout" task.
+      if (!r.error && r.captures?.length) await raw(db).from("invo_bridge_raw").upsert({ portfolio_id: r.id, at: nowIso, final_url: r.final_url ?? null,
+        payload: r.captures.slice(0, 60) as never, note: "scout" });
+      continue;
+    }
     const t = tmap.get(r.id);
     if (!t) continue;
     if (r.error) { problems.push({ user: t.username, problem: r.error.slice(0, 200) }); continue; }
