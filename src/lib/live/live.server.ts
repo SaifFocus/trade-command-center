@@ -185,7 +185,8 @@ export async function executeLive(db: DB, signal: Row, opts: { ex?: LiveExchange
     if (act.some((p) => p.coin === signal.coin) || st.positions.some((p) => p.coin === signal.coin && p.szi !== 0))
       return await done({ status: "skipped", note: `already holding ${signal.coin}` });
     const used = act.reduce((a, p) => a + +(p.notional_usd ?? 0) / Math.max(1, +(p.leverage ?? 1)), 0);
-    const z = sizeLive({ cfg, asset: m, side, mark, stop: +signal.stop_px, equityUsd: equity, usedMarginUsd: used });
+    const conf = Number((signal.review as { confidence?: unknown } | null)?.confidence);
+    const z = sizeLive({ cfg, asset: m, side, mark, stop: +signal.stop_px, equityUsd: equity, usedMarginUsd: used, confidence: Number.isFinite(conf) ? conf : null });
     if (!z.ok) return await done({ status: "skipped", note: z.reason });
     const entry = entryOrder(m, z);
     const preview = protectiveOrders(m, side, z.sizeNum, +z.limitPx, +signal.stop_px, cfg.min_order_usd);

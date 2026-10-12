@@ -1,6 +1,7 @@
 // Live execution rules for real orders on Hyperliquid. Pure (no I/O) so every rule is unit-testable.
 // The I/O side (signing, sending, database) lives in hl-exchange.server.ts and live.server.ts.
 import { formatPrice, formatSize } from "@nktkas/hyperliquid/utils";
+import { SIZE_UP } from "../hl/risk";
 
 export type Side = "long" | "short";
 
@@ -117,6 +118,7 @@ export type LiveSize =
       riskUsd: number; // to the stop, from the expected fill
       leverage: number;
       marginUsd: number;
+      sizedUp?: boolean; // SIZE_UP raised the size so T1/T2 can be split
     }
   | { ok: false; reason: string };
 
@@ -134,6 +136,8 @@ export function sizeLive(p: {
   stop: number;
   equityUsd: number;
   usedMarginUsd: number;
+  /** Reviewer's confidence (0–100) of reaching T1 before the stop; 70+ may size up to $40 (SIZE_UP). */
+  confidence?: number | null;
 }): LiveSize {
   const { cfg, asset, side, mark, stop, equityUsd } = p;
   const dir = dirOf(side);
@@ -149,11 +153,24 @@ export function sizeLive(p: {
   if (minNotional > cap) return { ok: false, reason: `minimum order $${minNotional.toFixed(2)} is above the cap $${cap.toFixed(2)}` };
 
   let notional = ((equityUsd * cfg.risk_pct) / 100) / stopDist;
-  notional = Math.min(Math.max(notional, minNotional), cap);
+  // Owner's rule (SIZE_UP): at 70%+ confidence, size up just enough for both halves to clear the minimum at their
+  // targets (so T1/T2 can be split), never above $40; the max-risk check does not apply to that step.
+  const { t1, t2 } = targetsFrom(side, limit, stop);
+  const splitOk = (lots: number) => {
+    const half = Math.floor(lots / 2);
+    return half > 0 && lotsToSize(half, asset.szDecimals) * t1 >= minNotional && lotsToSize(lots - half, asset.szDecimals) * t2 >= minNotional;
+  };
+  const need = (2 * minNotional * mark) / Math.min(t1, t2);
+  const upCap = Math.min(cap, SIZE_UP.maxNotionalUsd);
+  const sizedUp = p.confidence != null && p.confidence >= SIZE_UP.minConfidence && notional < need && need <= upCap;
+  if (sizedUp) notional = need;
+  const capNow = sizedUp ? upCap : cap;
+  notional = Math.min(Math.max(notional, minNotional), capNow);
 
   let lots = lotsFor(notional / mark, asset.szDecimals);
   for (let i = 0; i < 1000 && lotsToSize(lots, asset.szDecimals) * mark < minNotional; i++) lots++;
-  while (lots > 0 && lotsToSize(lots, asset.szDecimals) * mark > cap) lots--;
+  if (sizedUp) for (let i = 0; i < 1000 && !splitOk(lots) && lotsToSize(lots + 1, asset.szDecimals) * mark <= capNow; i++) lots++;
+  while (lots > 0 && lotsToSize(lots, asset.szDecimals) * mark > capNow) lots--;
   const sizeNum = lotsToSize(lots, asset.szDecimals);
   if (!(sizeNum > 0) || sizeNum * mark < cfg.min_order_usd)
     return { ok: false, reason: "no size fits between the minimum order and the cap" };
@@ -161,7 +178,7 @@ export function sizeLive(p: {
   const notionalUsd = sizeNum * mark;
   const riskUsd = notionalUsd * stopDist;
   const maxRisk = (equityUsd * cfg.max_risk_pct) / 100;
-  if (riskUsd > maxRisk + 1e-9)
+  if (!sizedUp && riskUsd > maxRisk + 1e-9)
     return { ok: false, reason: `smallest allowed order risks ${((riskUsd / equityUsd) * 100).toFixed(2)}% > max ${cfg.max_risk_pct}%` };
 
   const leverage = Math.max(1, Math.min(liveLeverageCap(asset.coin), asset.maxLeverage));
@@ -179,6 +196,7 @@ export function sizeLive(p: {
     riskUsd,
     leverage,
     marginUsd,
+    ...(sizedUp ? { sizedUp: true } : {}),
   };
 }
 

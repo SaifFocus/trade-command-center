@@ -13,9 +13,23 @@ export type EntryInput = {
   open_real: { margin_usd: number; side?: "long" | "short" }[];
   realized_net_usd: number; day_net_usd: number; week_net_usd: number; peak_equity_usd: number;
   targets?: { t1R: number; t2R: number };
+  /** Reviewer's estimated chance (0–100) of reaching T1 before the stop; drives SIZE_UP. */
+  confidence?: number | null;
 };
 
-export type Sized = { entry: number; R: number; t1: number; t2: number; size_coin: number; notional_usd: number; margin_usd: number; leverage: number; risk_usd: number };
+export type Sized = {
+  entry: number; R: number; t1: number; t2: number; size_coin: number; notional_usd: number; margin_usd: number; leverage: number; risk_usd: number;
+  /** true when SIZE_UP raised the size so the position can be split into two halves above the minimum order. */
+  sized_up?: boolean;
+};
+
+/**
+ * Owner's rule (2026-10-12): when the reviewer rates a trade's chance of reaching T1 at 70% or more and the normal size
+ * is too small to split into two halves above the exchange minimum, size it up to the split minimum, never above $40.
+ * The usual max-risk check does not apply to that step.
+ */
+export const SIZE_UP = { minConfidence: 70, maxNotionalUsd: 40, minOrderCushion: 1.02 } as const;
+export const splitMinUsd = (minOrderUsd: number) => 2 * minOrderUsd * SIZE_UP.minOrderCushion;
 export type EntryResult = ({ ok: true } & Sized) | { ok: false; reason: string; kill?: boolean };
 
 export function stockholmHour(d: Date): number {
@@ -30,10 +44,10 @@ export const leverageCap = (coin: string) => (coin === "BTC" || coin === "ETH" ?
 
 /** Fill at mark ± slippage, size by risk_pct of equity, apply min order / max risk / margin rules. */
 /** `shadow`: a comparison-only position, sized at the normal risk with no minimum order or margin check (it is never sent). */
-/** `targets`: T1/T2 distances in R for the setup (engine mgmtFor); defaults to 1.5R / 3R. */
+/** `targets`: T1/T2 distances in R for the setup (engine mgmtFor); defaults to 1.5R / 3R. `confidence`: see SIZE_UP. */
 export function sizePosition(
   cfg: DeskCfg, coin: string, side: "long" | "short", mark: number, stop: number, equity: number, usedMargin: number, shadow = false,
-  targets: { t1R: number; t2R: number } = { t1R: 1.5, t2R: 3 },
+  targets: { t1R: number; t2R: number } = { t1R: 1.5, t2R: 3 }, confidence: number | null = null,
 ): ({ ok: true } & Sized) | { ok: false; reason: string } {
   const dir = side === "long" ? 1 : -1;
   const entry = mark * (1 + (dir * cfg.slip_pct) / 100);
@@ -42,7 +56,12 @@ export function sizePosition(
   const stopDist = R / entry;
   let risk = (equity * cfg.risk_pct) / 100;
   let notional = risk / stopDist;
-  if (!shadow && notional < cfg.min_order_usd) {
+  const splitMin = splitMinUsd(cfg.min_order_usd);
+  const sizedUp = !shadow && confidence != null && confidence >= SIZE_UP.minConfidence && notional < splitMin && splitMin <= SIZE_UP.maxNotionalUsd;
+  if (sizedUp) {
+    notional = splitMin;
+    risk = notional * stopDist;
+  } else if (!shadow && notional < cfg.min_order_usd) {
     notional = cfg.min_order_usd;
     risk = notional * stopDist;
     if (risk > (equity * cfg.max_risk_pct) / 100)
@@ -52,7 +71,7 @@ export function sizePosition(
   const margin = notional / leverage;
   const free = equity - usedMargin;
   if (!shadow && margin > free) return { ok: false, reason: `margin $${margin.toFixed(2)} exceeds free equity $${free.toFixed(2)}` };
-  return { ok: true, entry, R, t1: entry + dir * targets.t1R * R, t2: entry + dir * targets.t2R * R, size_coin: notional / entry, notional_usd: notional, margin_usd: margin, leverage, risk_usd: risk };
+  return { ok: true, entry, R, t1: entry + dir * targets.t1R * R, t2: entry + dir * targets.t2R * R, size_coin: notional / entry, notional_usd: notional, margin_usd: margin, leverage, risk_usd: risk, ...(sizedUp ? { sized_up: true } : {}) };
 }
 
 export function evaluateEntry(x: EntryInput): EntryResult {
@@ -76,5 +95,5 @@ export function evaluateEntry(x: EntryInput): EntryResult {
   if (dir * (x.mark - x.stop_px) <= 0) return { ok: false, reason: "price is already beyond the stop" };
   if (dir * (x.mark - x.ref_px) > 0.5 * sigR) return { ok: false, reason: "price moved more than 0.5R toward the target" };
   const used = x.open_real.reduce((a, p) => a + p.margin_usd, 0);
-  return sizePosition(cfg, x.coin, x.side, x.mark, x.stop_px, equity, used, false, x.targets);
+  return sizePosition(cfg, x.coin, x.side, x.mark, x.stop_px, equity, used, false, x.targets, x.confidence ?? null);
 }

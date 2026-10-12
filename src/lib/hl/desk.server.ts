@@ -280,7 +280,7 @@ export async function runExecute(db: DB) {
           cfg, now, coin: s.coin, side: s.side as "long" | "short", ref_px: +s.ref_px, stop_px: +s.stop_px, mark,
           crowding_flag: (s.review as any)?.crowding_flag === true, open_real,
           realized_net_usd: r.all, day_net_usd: r.day, week_net_usd: r.week, peak_equity_usd: +(peakRow?.[0]?.equity_usd ?? 0),
-          targets: mgmtFor(s.setup),
+          targets: mgmtFor(s.setup), confidence: confidenceOf(s),
         });
     if (!res.ok) {
       await db.from("signals").update({ status: "rejected_by_risk", risk_note: res.reason }).eq("id", s.id);
@@ -307,11 +307,17 @@ export async function runExecute(db: DB) {
       const lr = await executeLive(db, s, { paperPositionId: paperId });
       out.live.push(`${s.coin}: ${lr.status} — ${lr.note}`);
     }
-    await log(db, `PAPER FILL ${s.coin} ${s.side.toUpperCase()} ${s.setup} @ ${res.entry.toPrecision(6)} · $${res.notional_usd.toFixed(2)} notional · risk $${res.risk_usd.toFixed(2)} · ${res.leverage}x cap`, "TRADE");
+    await log(db, `PAPER FILL ${s.coin} ${s.side.toUpperCase()} ${s.setup} @ ${res.entry.toPrecision(6)} · $${res.notional_usd.toFixed(2)} notional · risk $${res.risk_usd.toFixed(2)} · ${res.leverage}x cap${res.sized_up ? ` · sized up so it can be split (confidence ${confidenceOf(s)}%)` : ""}`, "TRADE");
   }
   await snapshot(db, { ...cfgRow, kill_switch: cfg.kill_switch }, "execute");
   await log(db, `Execute done · ${out.expired} expired · ${out.shadow.length} shadow · ${out.executed.length} filled · ${out.rejected.length} rejected · ${out.live.length} live`);
   return out;
+}
+
+/** Reviewer's confidence (0–100) that the trade reaches T1 before its stop, from submit_review. */
+function confidenceOf(s: { review?: unknown }): number | null {
+  const c = Number((s.review as { confidence?: unknown } | null)?.confidence);
+  return Number.isFinite(c) ? c : null;
 }
 
 async function insertPosition(

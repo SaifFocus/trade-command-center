@@ -47,6 +47,28 @@ describe("sizeLive", () => {
     const z = sizeLive({ cfg, asset: ONDO, side: "long", mark: 0.4922, stop: 0.4352, equityUsd: 59.95, usedMarginUsd: 0 });
     expect(z.ok).toBe(false);
   });
+  it("sizes a 70%+ confidence trade up so T1/T2 can split, never above $40", () => {
+    // SOL 6% stop at $60: normal size $13.50 cannot split into two $10.20 halves
+    const normal = sizeLive({ cfg, asset: SOL, side: "long", mark: 150, stop: 141, equityUsd: 60, usedMarginUsd: 0, confidence: 65 });
+    expect(normal.ok && normal.sizedUp).toBeFalsy();
+    const up = sizeLive({ cfg, asset: SOL, side: "long", mark: 150, stop: 141, equityUsd: 60, usedMarginUsd: 0, confidence: 75 });
+    expect(up.ok).toBe(true);
+    if (!up.ok) return;
+    expect(up.sizedUp).toBe(true);
+    expect(up.notionalUsd).toBeLessThanOrEqual(40);
+    expect(protectiveOrders(SOL, "long", up.sizeNum, Number(up.limitPx), 141, cfg.min_order_usd).split).toBe(true);
+    // ONDO-like 11.6% stop: the minimum order alone is rejected for risk, but a 70%+ trade may size up to split
+    const ondo = sizeLive({ cfg, asset: ONDO, side: "long", mark: 0.4922, stop: 0.4352, equityUsd: 59.95, usedMarginUsd: 0, confidence: 80 });
+    expect(ondo.ok).toBe(true);
+    if (!ondo.ok) return;
+    expect(ondo.notionalUsd).toBeLessThanOrEqual(40);
+    expect(protectiveOrders(ONDO, "long", ondo.sizeNum, Number(ondo.limitPx), 0.4352, cfg.min_order_usd).split).toBe(true);
+    // shorts need a little more because the halves are valued at the lower target prices
+    const sh = sizeLive({ cfg, asset: SOL, side: "short", mark: 150, stop: 159, equityUsd: 60, usedMarginUsd: 0, confidence: 90 });
+    expect(sh.ok).toBe(true);
+    if (!sh.ok) return;
+    expect(protectiveOrders(SOL, "short", sh.sizeNum, Number(sh.limitPx), 159, cfg.min_order_usd).split).toBe(true);
+  });
   it("caps notional at 2.5x equity and $200", () => {
     const z = sizeLive({ cfg: { ...cfg, risk_pct: 2 }, asset: BTC, side: "short", mark: 100_000, stop: 100_100, equityUsd: 60, usedMarginUsd: 0 });
     expect(z.ok).toBe(true);

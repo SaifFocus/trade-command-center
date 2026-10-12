@@ -61,4 +61,26 @@ describe("paper desk risk rules", () => {
     expect(b.ok && b.leverage).toBe(5);
     expect(s.ok && s.leverage).toBe(3);
   });
+
+  it("sizes a 70%+ confidence trade up to the split minimum, never above $40", () => {
+    const c = { ...cfg, budget_sek: 1000, risk_pct: 1 }; // $100 equity, $1 risk
+    // 9% stop: normal size ~$11, too small to split into two $10 halves
+    const normal = evaluateEntry({ ...base, cfg: c, stop_px: 91, confidence: 60 });
+    expect(normal.ok && normal.notional_usd).toBeCloseTo(1 / (1 - 91 / 100.05), 1);
+    const up = evaluateEntry({ ...base, cfg: c, stop_px: 91, confidence: 70 });
+    expect(up.ok && up.sized_up).toBe(true);
+    expect(up.ok && up.notional_usd).toBeCloseTo(20.4, 6);
+    // 15% stop: $20.40 risks 3.06% (> max 2%), allowed because the owner authorised up to $40 for these trades
+    const wide = evaluateEntry({ ...base, cfg: c, stop_px: 85, confidence: 80 });
+    expect(wide.ok && wide.notional_usd).toBeCloseTo(20.4, 6);
+    // already big enough to split: no change
+    const tight = evaluateEntry({ ...base, cfg: c, stop_px: 97, confidence: 90 });
+    expect(tight.ok && tight.sized_up).toBeFalsy();
+    // shadows never size up
+    const z = sizePosition(c, "SOL", "long", 100, 91, 100, 0, true, undefined, 90);
+    expect(z.ok && z.sized_up).toBeFalsy();
+  });
+  it("allows entries at night when the night rule is off", () => {
+    expect(reason({ cfg: { ...cfg, night_rule: false }, now: new Date("2026-07-01T01:00:00Z") })).toBe("ok");
+  });
 });
