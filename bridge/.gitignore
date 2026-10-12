@@ -1,0 +1,8 @@
+node_modules/
+profile/
+secret.txt
+secret-hash.txt
+*.log
+bridge.pid
+stop.flag
+package-lock.json

@@ -27,12 +27,30 @@ export async function dailyAtr(coin: string): Promise<number | null> {
   return a[a.length - 1] ?? null;
 }
 
+/** Lease in sm_jobs so overlapping cron runs (every minute) never process the same snapshot twice. */
+async function takeLease(db: DB, name: string, ms: number): Promise<boolean> {
+  const now = new Date().toISOString();
+  await db.from("sm_jobs").upsert({ name, state: { until: "1970-01-01T00:00:00.000Z" } as never, updated_at: now }, { onConflict: "name", ignoreDuplicates: true });
+  const { data } = await db.from("sm_jobs").update({ state: { until: new Date(Date.now() + ms).toISOString() } as never, updated_at: now })
+    .eq("name", name).lt("state->>until", now).select("name");
+  return !!data?.length;
+}
+const releaseLease = (db: DB, name: string) =>
+  db.from("sm_jobs").update({ state: { until: "1970-01-01T00:00:00.000Z" } as never, updated_at: new Date().toISOString() }).eq("name", name);
+
 export async function trackWatchlist(db: DB) {
+  if (!(await takeLease(db, "track_lock", 4 * 60_000))) return { skipped: "previous run still busy" };
+  try { return await trackOnce(db); } finally { await releaseLease(db, "track_lock"); }
+}
+
+async function trackOnce(db: DB) {
   // Watched wallets (follow signals) plus mirrored Invo traders (Mimic simulator).
   const { data: wl } = await db.from("sm_scores").select("address,tier,score,tracked_at,mirror").or("watchlist.eq.true,mirror.eq.true");
   const events: TrackEvent[] = [];
   const nowIso = new Date().toISOString();
   for (const w of wl ?? []) {
+    // Invo portfolios ("invo:<id>") are snapshotted by the Invo bridge (invo-bridge.server.ts), not read on-chain.
+    if (w.address.startsWith("invo:")) continue;
     let ch: CH;
     try { ch = await hlInfo<CH>({ type: "clearinghouseState", user: w.address }); } catch { continue; }
     const av = +ch.marginSummary.accountValue;
@@ -81,13 +99,15 @@ export async function trackWatchlist(db: DB) {
 
   const signals = await followSignals(db);
   const exits = await followExits(db);
+  const { checkBridgeHealth } = await import("./invo-bridge.server");
+  const bridge = await checkBridgeHealth(db).catch(() => null);
   const mirror = new Set((wl ?? []).filter((w) => w.mirror).map((w) => w.address));
   let mimic: unknown = null;
   if (mirror.size || events.length) {
     const [mids, tradable] = await Promise.all([hlInfo<Record<string, string>>({ type: "allMids" }), mimicCoins(db as never)]);
     mimic = await mimicStep(db as never, events, mirror, mids, tradable);
   }
-  return { wallets: wl?.length ?? 0, mirror: mirror.size, events: events.length, signals, exits, mimic };
+  return { wallets: wl?.length ?? 0, mirror: mirror.size, events: events.length, signals, exits, mimic, bridge };
 }
 
 async function followSignals(db: DB) {
@@ -108,7 +128,8 @@ async function followSignals(db: DB) {
   for (const e of evs) {
     const key = `${e.coin}|${e.side}`;
     if (!liquid.has(e.coin) || created.some((c) => c.startsWith(e.coin + " "))) continue;
-    if ((e.notional_frac ?? 0) < (scouted.has(e.address) ? SCOUT_MIN_FRAC : 0.02)) continue;
+    // Invo portfolios (bridge) count every open; scouted wallets from 0.5% of account value; others from 2%.
+    if (!e.address.startsWith("invo:") && (e.notional_frac ?? 0) < (scouted.has(e.address) ? SCOUT_MIN_FRAC : 0.02)) continue;
     const src = sm.get(e.address);
     const { data: holders } = await db.from("sm_positions").select("*").eq("coin", e.coin).eq("side", e.side);
     // Consensus counts only full-bar wallets; practice wallets never make a real follow signal.

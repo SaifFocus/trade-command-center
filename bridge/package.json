@@ -1,0 +1,10 @@
+{
+  "name": "apex-invo-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Runs on the owner's computer: keeps a browser logged into Invo and forwards what the Invo app downloads to APEX.",
+  "dependencies": {
+    "playwright-core": "^1.50.0"
+  }
+}

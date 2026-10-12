@@ -138,7 +138,7 @@ export async function processQueue(db: DB, budgetMs = 230_000) {
 
 export const PRACTICE_SLOTS = 20;
 /** Owner-scouted Invo traders (sm_wallets.sources contains 'invo_scout'), followed on paper outside the 20 practice slots. */
-export const SCOUT_SLOTS = 20;
+export const SCOUT_SLOTS = 30;
 const practiceOk = (f: unknown) => {
   const x = (f ?? {}) as Record<string, boolean>;
   return !!(x.swing_hold && x.recent && x.leverage_liq && x.liquid);

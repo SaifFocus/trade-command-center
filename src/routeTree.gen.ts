@@ -31,6 +31,8 @@ import { Route as ApiCronSmCopyRouteImport } from './routes/api/cron/sm-copy'
 import { Route as ApiCronSmDailyRouteImport } from './routes/api/cron/sm-daily'
 import { Route as ApiCronSmDeepDiveRouteImport } from './routes/api/cron/sm-deep-dive'
 import { Route as ApiCronSmTrackRouteImport } from './routes/api/cron/sm-track'
+import { Route as ApiInvoIngestRouteImport } from './routes/api/invo/ingest'
+import { Route as ApiInvoTargetsRouteImport } from './routes/api/invo/targets'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -148,6 +150,16 @@ const ApiCronSmTrackRoute = ApiCronSmTrackRouteImport.update({
   path: '/api/cron/sm-track',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiInvoIngestRoute = ApiInvoIngestRouteImport.update({
+  id: '/api/invo/ingest',
+  path: '/api/invo/ingest',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiInvoTargetsRoute = ApiInvoTargetsRouteImport.update({
+  id: '/api/invo/targets',
+  path: '/api/invo/targets',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -170,6 +182,8 @@ export interface FileRoutesByFullPath {
   '/api/cron/sm-daily': typeof ApiCronSmDailyRoute
   '/api/cron/sm-deep-dive': typeof ApiCronSmDeepDiveRoute
   '/api/cron/sm-track': typeof ApiCronSmTrackRoute
+  '/api/invo/ingest': typeof ApiInvoIngestRoute
+  '/api/invo/targets': typeof ApiInvoTargetsRoute
   '/rewards/': typeof AuthenticatedRewardsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -193,6 +207,8 @@ export interface FileRoutesByTo {
   '/api/cron/sm-daily': typeof ApiCronSmDailyRoute
   '/api/cron/sm-deep-dive': typeof ApiCronSmDeepDiveRoute
   '/api/cron/sm-track': typeof ApiCronSmTrackRoute
+  '/api/invo/ingest': typeof ApiInvoIngestRoute
+  '/api/invo/targets': typeof ApiInvoTargetsRoute
   '/rewards': typeof AuthenticatedRewardsIndexRoute
 }
 export interface FileRoutesById {
@@ -218,6 +234,8 @@ export interface FileRoutesById {
   '/api/cron/sm-daily': typeof ApiCronSmDailyRoute
   '/api/cron/sm-deep-dive': typeof ApiCronSmDeepDiveRoute
   '/api/cron/sm-track': typeof ApiCronSmTrackRoute
+  '/api/invo/ingest': typeof ApiInvoIngestRoute
+  '/api/invo/targets': typeof ApiInvoTargetsRoute
   '/_authenticated/rewards/': typeof AuthenticatedRewardsIndexRoute
 }
 export interface FileRouteTypes {
@@ -243,6 +261,8 @@ export interface FileRouteTypes {
     | '/api/cron/sm-daily'
     | '/api/cron/sm-deep-dive'
     | '/api/cron/sm-track'
+    | '/api/invo/ingest'
+    | '/api/invo/targets'
     | '/rewards/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -266,6 +286,8 @@ export interface FileRouteTypes {
     | '/api/cron/sm-daily'
     | '/api/cron/sm-deep-dive'
     | '/api/cron/sm-track'
+    | '/api/invo/ingest'
+    | '/api/invo/targets'
     | '/rewards'
   id:
     | '__root__'
@@ -290,6 +312,8 @@ export interface FileRouteTypes {
     | '/api/cron/sm-daily'
     | '/api/cron/sm-deep-dive'
     | '/api/cron/sm-track'
+    | '/api/invo/ingest'
+    | '/api/invo/targets'
     | '/_authenticated/rewards/'
   fileRoutesById: FileRoutesById
 }
@@ -305,6 +329,8 @@ export interface RootRouteChildren {
   ApiCronSmDailyRoute: typeof ApiCronSmDailyRoute
   ApiCronSmDeepDiveRoute: typeof ApiCronSmDeepDiveRoute
   ApiCronSmTrackRoute: typeof ApiCronSmTrackRoute
+  ApiInvoIngestRoute: typeof ApiInvoIngestRoute
+  ApiInvoTargetsRoute: typeof ApiInvoTargetsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -463,6 +489,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronSmTrackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/invo/ingest': {
+      id: '/api/invo/ingest'
+      path: '/api/invo/ingest'
+      fullPath: '/api/invo/ingest'
+      preLoaderRoute: typeof ApiInvoIngestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/invo/targets': {
+      id: '/api/invo/targets'
+      path: '/api/invo/targets'
+      fullPath: '/api/invo/targets'
+      preLoaderRoute: typeof ApiInvoTargetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -509,6 +549,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCronSmDailyRoute: ApiCronSmDailyRoute,
   ApiCronSmDeepDiveRoute: ApiCronSmDeepDiveRoute,
   ApiCronSmTrackRoute: ApiCronSmTrackRoute,
+  ApiInvoIngestRoute: ApiInvoIngestRoute,
+  ApiInvoTargetsRoute: ApiInvoTargetsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
