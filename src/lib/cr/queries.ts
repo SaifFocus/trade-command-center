@@ -57,14 +57,19 @@ export function useCampaigns() {
 export const clipsQueryOptions = queryOptions({
     queryKey: ["cr", "clips"],
     refetchInterval: REFRESH,
-    queryFn: () =>
-      must<Clip[]>(
-        supabase
+    queryFn: async () => {
+      const clips: Clip[] = [];
+      for (let offset = 0; ; offset += 500) {
+        const page = await must<Clip[]>(supabase
           .from("cr_clips")
           .select("*, cr_campaigns(id, title, brand), cr_posts(id, account_id, platform)")
           .order("updated_at", { ascending: false })
-          .limit(1000),
-      ),
+          .order("id")
+          .range(offset, offset + 499));
+        clips.push(...page);
+        if (page.length < 500) return clips;
+      }
+    },
   });
 
 export function useClips() {

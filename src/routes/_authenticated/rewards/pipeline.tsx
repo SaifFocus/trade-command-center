@@ -1,12 +1,21 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter, type ErrorComponentProps } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Clapperboard } from "lucide-react";
-import { Chip, EmptyState, LoadState, PageShell, ago, inputCls } from "@/components/rewards/kit";
+import { Button, Chip, EmptyState, PageShell, ago, errText, inputCls } from "@/components/rewards/kit";
+import { ClipReview } from "@/components/rewards/ClipReview";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { CLIP_STAGES, PLATFORM_LABEL, STAGE_LABEL, type ClipStage } from "@/lib/cr/logic";
-import { useAccounts, useCampaigns, useClips, type Clip } from "@/lib/cr/queries";
+import { accountsQueryOptions, campaignsQueryOptions, clipsQueryOptions, useRefreshCr, type Clip } from "@/lib/cr/queries";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/rewards/pipeline")({
+  loader: ({ context }) => Promise.all([
+    context.queryClient.ensureQueryData(clipsQueryOptions),
+    context.queryClient.ensureQueryData(campaignsQueryOptions),
+    context.queryClient.ensureQueryData(accountsQueryOptions),
+  ]),
+  errorComponent: PipelineError,
   head: () => ({
     meta: [
       { title: "APEX — Clip Pipeline" },
@@ -20,6 +29,11 @@ export const Route = createFileRoute("/_authenticated/rewards/pipeline")({
   component: PipelinePage,
 });
 
+function PipelineError({ error }: ErrorComponentProps) {
+  const router = useRouter();
+  return <div className="space-y-3 p-6"><p role="alert" className="text-destructive">{errText(error)}</p><Button onClick={() => { void router.invalidate(); }}>RETRY</Button></div>;
+}
+
 const COLUMN_ACCENT: Partial<Record<ClipStage, string>> = {
   awaiting_approval: "border-t-[var(--gold)]",
   approved: "border-t-[var(--neon)]",
@@ -31,11 +45,14 @@ const tc = (s: number | null) =>
   s == null ? "?" : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
 function PipelinePage() {
-  const clips = useClips();
-  const campaigns = useCampaigns();
-  const accounts = useAccounts();
+  const clips = useSuspenseQuery(clipsQueryOptions);
+  const campaigns = useSuspenseQuery(campaignsQueryOptions);
+  const accounts = useSuspenseQuery(accountsQueryOptions);
+  const refresh = useRefreshCr();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = clips.data.find((c) => c.id === selectedId);
   const [campaignId, setCampaignId] = useState("all");
-  const [showDenied, setShowDenied] = useState(false);
+  const [showDenied, setShowDenied] = useState(true);
   const now = Date.now();
 
   const handle = (id: string | null) => {
@@ -58,7 +75,6 @@ function PipelinePage() {
   return (
     <PageShell
       title="CLIP PIPELINE"
-      subtitle="Clips move left to right as agents work on them. Only you can move a clip past approval."
       actions={
         total > 0 && (
           <>
@@ -88,9 +104,7 @@ function PipelinePage() {
         )
       }
     >
-      <LoadState loading={clips.isLoading} error={clips.error} />
-
-      {!clips.isLoading && total === 0 ? (
+      {total === 0 ? (
         <EmptyState
           icon={Clapperboard}
           title="NO CLIPS YET"
@@ -104,7 +118,7 @@ function PipelinePage() {
                 <section
                   key={stage}
                   className={cn(
-                    "panel flex w-64 shrink-0 flex-col rounded-lg border-t-2",
+                    "flex w-64 shrink-0 flex-col border-t-2",
                     COLUMN_ACCENT[stage] ?? "border-t-border",
                   )}
                   aria-label={`${STAGE_LABEL[stage]}: ${items.length}`}
@@ -129,10 +143,10 @@ function PipelinePage() {
                   <div className="flex max-h-[70vh] flex-col gap-2 overflow-y-auto px-2 pb-2">
                     {items.length === 0 ? (
                       <div className="rounded border border-dashed border-border/60 px-2 py-4 text-center text-[11px] text-muted-foreground/60">
-                        Empty
+                        No clips at this stage yet
                       </div>
                     ) : (
-                      items.map((c) => <ClipCard key={c.id} clip={c} handle={handle} now={now} />)
+                      items.map((c) => <ClipCard key={c.id} clip={c} handle={handle} now={now} onOpen={() => setSelectedId(c.id)} />)
                     )}
                   </div>
                 </section>
@@ -141,6 +155,12 @@ function PipelinePage() {
           </div>
         )
       )}
+      <Sheet open={!!selected} onOpenChange={(open) => { if (!open) setSelectedId(null); }}>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
+          <SheetHeader className="mb-4"><SheetTitle className="break-words text-neon">{selected?.cr_campaigns?.title || selected?.cr_campaigns?.brand || "Clip details"}</SheetTitle><SheetDescription>Campaign specification and review</SheetDescription></SheetHeader>
+          {selected && <ClipReview key={selected.id} clip={selected} campaign={campaigns.data.find((c) => c.id === selected.campaign_id) ?? null} onDone={async () => { await refresh(); setSelectedId(null); }} />}
+        </SheetContent>
+      </Sheet>
     </PageShell>
   );
 }
@@ -149,17 +169,20 @@ function ClipCard({
   clip: c,
   handle,
   now,
+  onOpen,
 }: {
   clip: Clip;
   handle: (id: string | null) => string | null;
   now: number;
+  onOpen: () => void;
 }) {
-  const where = c.cr_posts.map((p) => handle(p.account_id)).filter(Boolean) as string[];
+  const where = [...new Set(c.cr_posts.map((p) => handle(p.account_id)).filter(Boolean))];
   return (
     <article className="rounded border border-border bg-terminal p-2.5 text-xs">
       <div className="truncate text-[10px] tracking-wider text-muted-foreground">
         {c.cr_campaigns?.title || c.cr_campaigns?.brand || "Campaign"}
       </div>
+      {where.length === 0 && <p className="mt-2 text-[10px] text-muted-foreground">Account unassigned</p>}
       <p className="mt-1 line-clamp-3 text-foreground">
         {c.hook || <span className="text-muted-foreground">No hook yet</span>}
       </p>
@@ -176,6 +199,7 @@ function ClipCard({
           </Chip>
         ))}
       </div>
+      <Button className="mt-3 w-full justify-center" tone={c.stage === "awaiting_approval" ? "gold" : "muted"} onClick={onOpen}>{c.stage === "awaiting_approval" ? "REVIEW CLIP" : "VIEW DETAILS"}</Button>
       <div className="mt-2 flex justify-between text-[10px] text-muted-foreground">
         <span>{c.created_by_agent ?? ""}</span>
         <span>{ago(c.updated_at, now)}</span>
