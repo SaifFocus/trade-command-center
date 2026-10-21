@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { saveCampaignFn } from "@/lib/cr/cr.functions";
+import { campaignInput } from "@/lib/cr/campaign-input";
 import { CAMPAIGN_STATUSES, PLATFORMS, PLATFORM_LABEL } from "@/lib/cr/logic";
 import type { Campaign } from "@/lib/cr/queries";
 import { cn } from "@/lib/utils";
@@ -52,6 +53,7 @@ function toForm(c?: Campaign | null): Form {
     required_credit: v(c?.required_credit),
     source_assets: (c?.source_assets ?? []).join("\n"),
     prohibited: v(c?.prohibited),
+    red_flags: (c?.red_flags ?? []).join("\n"),
     deadline: c?.deadline ? c.deadline.slice(0, 10) : "",
     score: v(c?.score),
     notes: v(c?.notes),
@@ -86,7 +88,7 @@ export function CampaignForm({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   campaign?: Campaign | null;
-  onSaved: () => void;
+  onSaved: () => void | Promise<void>;
 }) {
   const save = useServerFn(saveCampaignFn);
   const [f, setF] = useState<Form>(() => toForm(campaign));
@@ -116,10 +118,14 @@ export function CampaignForm({
       setError("Budget remaining can't be more than the total budget.");
       return;
     }
+    const numericFields = ["rate_per_1k_usd", "budget_total_usd", "budget_remaining_usd", "min_payout_usd", "max_payout_usd", "flat_fee_usd", "min_length_s", "max_length_s"];
+    if (numericFields.some((key) => f[key].trim() && num(f[key]) == null)) {
+      setError("Enter valid numbers for payouts, budgets and lengths.");
+      return;
+    }
     setBusy(true);
     try {
-      await save({
-        data: {
+      const data = campaignInput.parse({
           id: campaign?.id,
           whop_url: url,
           title: f.title.trim() || null,
@@ -142,15 +148,17 @@ export function CampaignForm({
           disclosure_required: f.disclosure === "1",
           source_assets: lines(f.source_assets),
           prohibited: f.prohibited.trim() || null,
+          red_flags: lines(f.red_flags),
           deadline: f.deadline ? new Date(`${f.deadline}T23:59:59Z`).toISOString() : null,
           score: f.score ? Number(f.score) : null,
           notes: f.notes.trim() || null,
-        },
       });
-      onSaved();
+      await save({ data });
+      await onSaved();
       onOpenChange(false);
     } catch (e) {
-      setError(errText(e));
+      setError(e && typeof e === "object" && "issues" in e && Array.isArray(e.issues)
+        ? e.issues.map((issue) => issue.message).join(" ") : errText(e));
     } finally {
       setBusy(false);
     }
@@ -193,7 +201,7 @@ export function CampaignForm({
             </select>
           </Field>
           <Field label="STATUS">
-            <select className={inputCls} value={f.status} onChange={set("status")}>
+            <select aria-label="STATUS" className={inputCls} value={f.status} onChange={set("status")}>
               {CAMPAIGN_STATUSES.map((s) => (
                 <option key={s} value={s}>
                   {s}
@@ -256,7 +264,7 @@ export function CampaignForm({
           <Field label="PLATFORMS" className="sm:col-span-2">
             <div className="flex flex-wrap gap-2">
               {PLATFORMS.map((p) => (
-                <button
+                <Button
                   key={p}
                   type="button"
                   onClick={() => togglePlatform(p)}
@@ -266,10 +274,10 @@ export function CampaignForm({
                       ? "border-[var(--neon)] text-neon"
                       : "border-border text-muted-foreground",
                   )}
-                  aria-pressed={platforms.includes(p)}
+                  tone={platforms.includes(p) ? "neon" : "muted"}
                 >
                   {PLATFORM_LABEL[p]}
-                </button>
+                </Button>
               ))}
             </div>
           </Field>
@@ -357,9 +365,12 @@ export function CampaignForm({
               onChange={set("notes")}
             />
           </Field>
+          <Field label="RED FLAGS (ONE PER LINE)" className="sm:col-span-2">
+            <textarea aria-label="RED FLAGS (ONE PER LINE)" className={cn(inputCls, "min-h-14")} value={f.red_flags} onChange={set("red_flags")} />
+          </Field>
         </div>
 
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button tone="muted" onClick={() => onOpenChange(false)}>
             CANCEL

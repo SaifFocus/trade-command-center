@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { estimateEarnings, isBudgetLow } from "./logic";
@@ -41,8 +41,7 @@ async function must<T>(
   return (data ?? []) as T;
 }
 
-export function useCampaigns() {
-  return useQuery({
+export const campaignsQueryOptions = queryOptions({
     queryKey: ["cr", "campaigns"],
     refetchInterval: REFRESH,
     queryFn: () =>
@@ -50,6 +49,9 @@ export function useCampaigns() {
         supabase.from("cr_campaigns").select("*").order("created_at", { ascending: false }),
       ),
   });
+
+export function useCampaigns() {
+  return useQuery(campaignsQueryOptions);
 }
 
 export function useClips() {

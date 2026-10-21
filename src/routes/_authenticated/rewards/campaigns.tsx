@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter, type ErrorComponentProps, type SearchSchemaInput } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, ExternalLink, Megaphone, Pencil, Plus } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, ExternalLink, Megaphone, Pencil, Plus } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -36,10 +37,15 @@ import {
   viewsToMinimum,
   type CampaignStatus,
 } from "@/lib/cr/logic";
-import { useCampaigns, useRefreshCr, type Campaign } from "@/lib/cr/queries";
+import { campaignsQueryOptions, useRefreshCr, type Campaign } from "@/lib/cr/queries";
+import { campaignSearchSchema, filterCampaigns, type CampaignSearch } from "@/lib/cr/campaigns";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/rewards/campaigns")({
+  validateSearch: (search: SearchSchemaInput & Partial<CampaignSearch>) => campaignSearchSchema.parse(search),
+  loader: ({ context }) => context.queryClient.ensureQueryData(campaignsQueryOptions),
+  errorComponent: CampaignLoadError,
+  notFoundComponent: () => <p className="p-6 text-muted-foreground">Campaigns unavailable.</p>,
   head: () => ({
     meta: [
       { title: "APEX — Campaigns" },
@@ -53,7 +59,10 @@ export const Route = createFileRoute("/_authenticated/rewards/campaigns")({
   component: CampaignsPage,
 });
 
-type SortKey = "score" | "rate" | "budget" | "deadline" | "newest";
+function CampaignLoadError({ error }: ErrorComponentProps) {
+  const router = useRouter();
+  return <div className="space-y-3 p-6"><p role="alert" className="text-destructive">{errText(error)}</p><Button onClick={() => { void router.invalidate(); }}>RETRY</Button></div>;
+}
 
 const STATUS_TONE: Record<string, "neon" | "gold" | "muted" | "danger"> = {
   active: "neon",
@@ -100,12 +109,14 @@ function BudgetBar({ c }: { c: Campaign }) {
 }
 
 function CampaignsPage() {
-  const campaigns = useCampaigns();
+  const campaigns = useSuspenseQuery(campaignsQueryOptions);
   const refresh = useRefreshCr();
-  const [q, setQ] = useState("");
-  const [status, setStatus] = useState<"all" | CampaignStatus>("all");
-  const [platform, setPlatform] = useState<"all" | string>("all");
-  const [sort, setSort] = useState<SortKey>("score");
+  const search = Route.useSearch();
+  const { q, status, platform, sort, direction, budget } = search;
+  const navigate = Route.useNavigate();
+  const updateSearch = (patch: Partial<CampaignSearch>) => {
+    void navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true });
+  };
   const [openId, setOpenId] = useState<string | null>(null);
   const [form, setForm] = useState<{ open: boolean; campaign: Campaign | null }>({
     open: false,
@@ -113,24 +124,8 @@ function CampaignsPage() {
   });
   const now = Date.now();
 
-  const rows = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    const list = (campaigns.data ?? []).filter(
-      (c) =>
-        (status === "all" || c.status === status) &&
-        (platform === "all" || c.platforms.includes(platform)) &&
-        (!term ||
-          [c.title, c.brand, c.whop_url, c.notes].some((v) => v?.toLowerCase().includes(term))),
-    );
-    const val: Record<SortKey, (c: Campaign) => number> = {
-      score: (c) => c.score ?? -1,
-      rate: (c) => c.rate_per_1k_usd ?? -1,
-      budget: (c) => c.budget_remaining_usd ?? -1,
-      deadline: (c) => (c.deadline ? -Date.parse(c.deadline) : -Infinity),
-      newest: (c) => Date.parse(c.created_at),
-    };
-    return [...list].sort((a, b) => val[sort](b) - val[sort](a));
-  }, [campaigns.data, q, status, platform, sort]);
+  const rows = useMemo(() => filterCampaigns(campaigns.data, search), [campaigns.data, search]);
+  const draining = campaigns.data.filter((c) => isBudgetLow(c));
 
   const open = (campaigns.data ?? []).find((c) => c.id === openId) ?? null;
   const total = campaigns.data?.length ?? 0;
@@ -138,14 +133,22 @@ function CampaignsPage() {
   return (
     <PageShell
       title="CAMPAIGNS"
-      subtitle="Every Content Rewards campaign you are watching or clipping, scored by rate × remaining budget × fit."
       actions={
         <Button tone="gold" onClick={() => setForm({ open: true, campaign: null })}>
           <Plus className="size-3.5" /> ADD CAMPAIGN
         </Button>
       }
     >
-      <LoadState loading={campaigns.isLoading} error={campaigns.error} />
+      <LoadState loading={false} error={campaigns.error} />
+
+      {draining.length > 0 && (
+        <section aria-label="Budget alerts" className="border-l-2 border-destructive bg-destructive/5 px-4 py-3">
+          <h2 className="flex items-center gap-2 text-xs text-destructive"><AlertTriangle className="size-4" /> BUDGET DRAINING · {draining.length}</h2>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {draining.map((c) => <Button key={c.id} tone="danger" onClick={() => setOpenId(c.id)}>{c.title || c.brand || "Untitled campaign"} · {Math.round((budgetShare(c) ?? 0) * 100)}% LEFT</Button>)}
+          </div>
+        </section>
+      )}
 
       {!campaigns.isLoading && total === 0 ? (
         <EmptyState
@@ -165,13 +168,14 @@ function CampaignsPage() {
               <input
                 className={cn(inputCls, "max-w-xs")}
                 placeholder="Search title, brand, link…"
+                aria-label="Search campaigns"
                 value={q}
-                onChange={(e) => setQ(e.target.value)}
+                onChange={(e) => updateSearch({ q: e.target.value })}
               />
               <select
                 className={cn(inputCls, "w-auto")}
                 value={status}
-                onChange={(e) => setStatus(e.target.value as typeof status)}
+                onChange={(e) => updateSearch({ status: e.target.value as typeof status })}
                 aria-label="Status"
               >
                 <option value="all">All statuses</option>
@@ -184,7 +188,7 @@ function CampaignsPage() {
               <select
                 className={cn(inputCls, "w-auto")}
                 value={platform}
-                onChange={(e) => setPlatform(e.target.value)}
+                onChange={(e) => updateSearch({ platform: e.target.value as typeof platform })}
                 aria-label="Platform"
               >
                 <option value="all">All platforms</option>
@@ -197,7 +201,7 @@ function CampaignsPage() {
               <select
                 className={cn(inputCls, "w-auto")}
                 value={sort}
-                onChange={(e) => setSort(e.target.value as SortKey)}
+                onChange={(e) => updateSearch({ sort: e.target.value as typeof sort, direction: e.target.value === "deadline" ? "asc" : "desc" })}
                 aria-label="Sort"
               >
                 <option value="score">Sort: score</option>
@@ -206,6 +210,13 @@ function CampaignsPage() {
                 <option value="deadline">Sort: deadline soonest</option>
                 <option value="newest">Sort: newest</option>
               </select>
+              <Button title={direction === "asc" ? "Ascending order" : "Descending order"} onClick={() => updateSearch({ direction: direction === "asc" ? "desc" : "asc" })}>
+                {direction === "asc" ? <ArrowUp className="size-4" /> : <ArrowDown className="size-4" />}
+              </Button>
+              <select className={cn(inputCls, "w-auto")} value={budget} aria-label="Budget" onChange={(e) => updateSearch({ budget: e.target.value as typeof budget })}>
+                <option value="all">All budgets</option><option value="low">Budget alerts</option>
+              </select>
+              {(q || status !== "all" || platform !== "all" || budget !== "all") && <Button tone="muted" onClick={() => updateSearch({ q: "", status: "all", platform: "all", budget: "all" })}>CLEAR FILTERS</Button>}
               <span className="ml-auto text-[11px] text-muted-foreground">
                 {rows.length} of {total}
               </span>
@@ -241,7 +252,7 @@ function CampaignsPage() {
                           )}
                           <div className="min-w-0">
                             <div className="max-w-[280px] truncate text-foreground">
-                              {c.title || "Untitled campaign"}
+                              <Button tone="muted" onClick={() => setOpenId(c.id)} className="max-w-full border-0 bg-transparent p-0 text-left normal-case tracking-normal"><span className="truncate">{c.title || "Untitled campaign"}</span></Button>
                             </div>
                             <div className="max-w-[280px] truncate text-[11px] text-muted-foreground">
                               {c.brand || c.whop_url}
@@ -299,7 +310,7 @@ function CampaignsPage() {
       <CampaignDrawer
         campaign={open}
         onClose={() => setOpenId(null)}
-        onEdit={(c) => setForm({ open: true, campaign: c })}
+        onEdit={(c) => { setOpenId(null); setForm({ open: true, campaign: c }); }}
         onChanged={refresh}
       />
 
@@ -334,7 +345,7 @@ function CampaignDrawer({
   campaign: Campaign | null;
   onClose: () => void;
   onEdit: (c: Campaign) => void;
-  onChanged: () => void;
+  onChanged: () => void | Promise<void>;
 }) {
   const setStatus = useServerFn(setCampaignStatusFn);
   const [busy, setBusy] = useState(false);
@@ -346,7 +357,7 @@ function CampaignDrawer({
     setError("");
     try {
       await setStatus({ data: { id: c.id, status } });
-      onChanged();
+      await onChanged();
     } catch (e) {
       setError(errText(e));
     } finally {
@@ -394,7 +405,8 @@ function CampaignDrawer({
                 <Pencil className="size-3" /> EDIT
               </Button>
             </div>
-            {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
+            {error && <p role="alert" className="mt-2 text-xs text-destructive">{error}</p>}
+            {isBudgetLow(c) && <p className="mt-3 flex items-center gap-2 text-xs text-destructive"><AlertTriangle className="size-4" /> Budget alert · under 15% remaining</p>}
 
             {c.red_flags.length > 0 && (
               <div className="mt-4 rounded border border-[color-mix(in_oklab,var(--gold)_50%,transparent)] p-3">
