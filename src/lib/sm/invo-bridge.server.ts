@@ -67,9 +67,9 @@ export type BridgePayload = {
   results: { id: string; url?: string; final_url?: string; error?: string | null; captures: Capture[] }[];
 };
 
-async function warnOnce(db: DB, message: string, metadata?: unknown) {
-  // At most one identical warning per hour, so a long outage does not flood the log.
-  const since = new Date(Date.now() - 3600_000).toISOString();
+async function warnOnce(db: DB, message: string, metadata?: unknown, everyMs = 3600_000) {
+  // At most one identical warning per period (default an hour), so a long outage does not flood the log.
+  const since = new Date(Date.now() - everyMs).toISOString();
   const { data } = await db.from("agent_logs").select("id").eq("agent_name", "INVO BRIDGE").eq("message", message).gte("created_at", since).limit(1);
   if (data?.length) return;
   await db.from("agent_logs").insert({ agent_name: "INVO BRIDGE", message, level: "WARNING", market_id: "swing", metadata: (metadata ?? null) as never });
@@ -151,8 +151,9 @@ export async function checkBridgeHealth(db: DB) {
   const last = data?.[0]?.at ? Date.parse(data[0].at) : 0;
   const mins = (Date.now() - last) / 60_000;
   if (mins > BRIDGE.silentAfterMin) {
-    await warnOnce(db, last ? `Invo bridge silent for over ${BRIDGE.silentAfterMin} min (computer off, asleep or offline?). Invo follows pause; on-chain follows continue.`
-      : "Invo bridge has not reported yet: run setup in Documents\\APEX Invo Bridge.", { silent_min: Math.round(mins) });
+    // Never set up: remind once a day. Set up but silent: hourly, because follows are paused.
+    if (last) await warnOnce(db, `Invo bridge silent for over ${BRIDGE.silentAfterMin} min (computer off, asleep or offline?). Invo follows pause; on-chain follows continue.`, { silent_min: Math.round(mins) });
+    else await warnOnce(db, "Invo bridge has not reported yet: run setup in Documents\\APEX Invo Bridge.", null, 24 * 3600_000);
     return { silent_min: Math.round(mins) };
   }
   return { last_min: Math.round(mins) };
