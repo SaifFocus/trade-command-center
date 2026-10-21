@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useRouter, type ErrorComponentProps } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -59,7 +59,7 @@ export const Route = createFileRoute("/_authenticated/rewards/campaigns")({
   component: CampaignsPage,
 });
 
-function CampaignLoadError({ error }: { error: Error }) {
+function CampaignLoadError({ error }: ErrorComponentProps) {
   const router = useRouter();
   return <div className="space-y-3 p-6"><p role="alert" className="text-destructive">{errText(error)}</p><Button onClick={() => { void router.invalidate(); }}>RETRY</Button></div>;
 }
