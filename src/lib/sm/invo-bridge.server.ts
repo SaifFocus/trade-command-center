@@ -16,7 +16,7 @@ const raw = (db: DB) => db as unknown as SupabaseClient<any, any, any>;
 
 export const BRIDGE = {
   /** Seconds between rounds over all followed portfolios. */
-  cycleSeconds: 60,
+  cycleSeconds: 180,
   /** How long the bridge keeps listening after opening a portfolio page. */
   settleMs: 6000,
   maxBodyBytes: 600_000,

@@ -80,10 +80,12 @@ export async function pullLeaderboard(db: DB) {
   const rand = rng(Number(new Date().toISOString().slice(0, 10).replace(/-/g, "")));
   for (let i = rest.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [rest[i], rest[j]] = [rest[j], rest[i]]; }
   rest.slice(0, 200).forEach((r) => pick.set(r.address, r));
-  await mergeWallets(db, Array.from(pick.values()).map((r) => ({
-    address: r.address, source: "leaderboard",
-    patch: { display_name: r.name, account_value: r.av, lb_month_vlm: r.mVlm, lb_alltime_pnl: r.aPnl },
-  })));
+  // Only a real leaderboard name may set display_name (scouted Invo traders keep their Invo username). Two batches so
+  // every upsert row has the same columns: a bulk upsert would otherwise write NULL into a missing display_name.
+  const picked = Array.from(pick.values());
+  const stats = (r: Row) => ({ account_value: r.av, lb_month_vlm: r.mVlm, lb_alltime_pnl: r.aPnl });
+  await mergeWallets(db, picked.filter((r) => r.name).map((r) => ({ address: r.address, source: "leaderboard", patch: { display_name: r.name, ...stats(r) } })));
+  await mergeWallets(db, picked.filter((r) => !r.name).map((r) => ({ address: r.address, source: "leaderboard", patch: stats(r) })));
   const out = { rows: total, keys, vaults_excluded: vaults.size, passing_floor: pass.length, selected: pick.size };
   await setJob(db, "leaderboard", { ...out, at: new Date().toISOString() });
   await smLog(db, `Leaderboard pulled: ${total} rows, ${pass.length} pass floor, ${pick.size} selected. Keys: ${keys?.join(",")}`);

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-// Scout live tracking (every minute): watchlist positions -> events -> follow signals/exits. Requires x-cron-secret.
+// Scout live tracking (every 5 minutes): watchlist positions -> events -> follow signals/exits. Requires x-cron-secret.
 export const Route = createFileRoute("/api/cron/sm-track")({
   server: {
     handlers: {

@@ -3,7 +3,7 @@ APEX Invo Bridge
 
 What it does
   Keeps a Microsoft Edge browser (its own profile in the "profile" folder, separate from your normal browsers)
-  logged into Invo as you. About once a minute it opens each Invo portfolio APEX follows and sends APEX the data
+  logged into Invo as you. Every few minutes it opens each Invo portfolio APEX follows and sends APEX the data
   the Invo app itself loaded. APEX turns new positions into paper follow signals and $100 Mimic test copies.
   It only reads. It never trades, posts or changes anything in Invo, and your Invo password is never stored.
 
