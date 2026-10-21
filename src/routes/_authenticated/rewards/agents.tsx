@@ -138,7 +138,7 @@ function AgentsPage() {
             <Kpi
               label="AUTONOMY"
               value={
-                <span className="flex items-baseline gap-3 text-lg">
+                <span className="flex flex-wrap items-baseline gap-2 text-lg">
                   {stats.mix.map(({ a, n }) => (
                     <span
                       key={a}
@@ -190,7 +190,7 @@ function AgentsPage() {
                       )}
                       <li
                         className={cn(
-                          "flex items-center gap-2 rounded border bg-terminal px-2.5 py-1.5 text-[11px]",
+                          "flex items-center gap-2 border bg-terminal px-2.5 py-1.5 text-[11px]",
                           a.enabled ? "border-border" : "border-dashed border-border/60 opacity-50",
                         )}
                         title={`${a.name}: ${a.autonomy}${a.enabled ? "" : " (disabled)"}`}
@@ -220,7 +220,7 @@ function AgentsPage() {
             <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[10px] tracking-widest text-muted-foreground">
               {AUTONOMY.map((a) => (
                 <span key={a} className="inline-flex items-center gap-1.5">
-                  <AutonomyDot autonomy={a} /> {a.toUpperCase()} · {AUTONOMY_HINT[a].toLowerCase()}
+                  <AutonomyDot autonomy={a} /> {a.toUpperCase()}
                 </span>
               ))}
             </p>
