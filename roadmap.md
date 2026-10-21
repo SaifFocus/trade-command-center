@@ -10,6 +10,7 @@
 - [ ] /scout page + header link
 
 # Roadmap — Content Rewards
+- [ ] Finish Overview/Earnings: accurate pipeline KPIs, observed versus verified views, earning windows, USD payout estimates, owner readback and empty states
 - [x] Agents enable/autonomy controls, latest summaries and filtered run history; Accounts add/edit, status, Whop link declaration and empty states; owner saves/reload and mobile verified; temporary data removed
 - [x] Clip Pipeline and Approvals: shared spec review, stage cards, owner decisions with notes; approved/denied readback and mobile review verified; temporary data removed
 - [x] Campaigns sorting/filtering, details, budget alerts and owner add/edit/status actions; owner saves verified and temporary data removed
