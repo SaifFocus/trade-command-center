@@ -174,7 +174,7 @@ function DeskPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={eq.map((e) => ({ t: time(e.t), v: +e.equity_usd }))}>
                     <XAxis dataKey="t" hide /><YAxis domain={["auto", "auto"]} width={40} tick={{ fontSize: 10 }} />
-                    <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", fontSize: 11 }} />
+                    <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", fontSize: 11, color: "var(--foreground)" }} itemStyle={{ color: "var(--foreground)" }} labelStyle={{ color: "var(--foreground)" }} />
                     <Line type="monotone" dataKey="v" stroke="var(--neon)" strokeWidth={1.5} dot={false} isAnimationActive={false} />
                   </LineChart>
                 </ResponsiveContainer>
