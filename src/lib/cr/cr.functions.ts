@@ -3,41 +3,13 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertOwner } from "@/lib/auth/owner.server";
 import { ACCOUNT_STATUSES, AUTONOMY, CAMPAIGN_STATUSES, PLATFORMS } from "./logic";
+import { campaignInput } from "./campaign-input";
 
 // Owner-only Content Rewards actions. Reads happen in the browser under the owner-only SELECT
 // policies; every write goes through here (requireSupabaseAuth + assertOwner, then service role).
 // External agents never use these: they write through the service_role-only cr_* SQL functions.
 
-const money = z.number().min(0).max(100_000_000).nullable().optional();
-const seconds = z.number().int().min(0).max(36_000).nullable().optional();
 const text = (max: number) => z.string().trim().max(max).nullable().optional();
-const list = (max: number) => z.array(z.string().trim().min(1).max(500)).max(max).optional();
-
-const campaignInput = z.object({
-  id: z.string().uuid().optional(),
-  whop_url: z.string().trim().url().max(500),
-  brand: text(120),
-  title: text(200),
-  category: z.enum(["clipping", "ugc", "other"]).optional(),
-  rate_per_1k_usd: money,
-  budget_total_usd: money,
-  budget_remaining_usd: money,
-  min_payout_usd: money,
-  max_payout_usd: money,
-  flat_fee_usd: money,
-  platforms: z.array(z.enum(PLATFORMS)).max(5).optional(),
-  min_length_s: seconds,
-  max_length_s: seconds,
-  required_hashtags: list(30),
-  required_credit: text(200),
-  disclosure_required: z.boolean().optional(),
-  prohibited: text(2000),
-  source_assets: list(50),
-  deadline: z.string().datetime({ offset: true }).nullable().optional(),
-  score: z.number().int().min(1).max(5).nullable().optional(),
-  status: z.enum(CAMPAIGN_STATUSES).optional(),
-  notes: text(4000),
-});
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -70,11 +42,14 @@ export const setCampaignStatusFn = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     await assertOwner(context.supabase);
     const db = await admin();
-    const { error } = await db
+    const { data: updated, error } = await db
       .from("cr_campaigns")
       .update({ status: data.status, updated_at: new Date().toISOString() })
-      .eq("id", data.id);
+      .eq("id", data.id)
+      .select("id")
+      .maybeSingle();
     if (error) fail("Could not change the status.", error);
+    if (!updated) throw new Error("Campaign not found.");
     return { ok: true };
   });
 
