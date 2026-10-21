@@ -16,3 +16,5 @@
 - Campaigns uses URL-backed filters and sorting, Query loader priming, and a shared campaign-input schema for owner writes. Why: reloads preserve the view and client/server validation stays consistent without changing trading logic.
 - Clip Pipeline and Approvals share `ClipReview` and loader-primed, paginated clip reads; owner review uses tested `clip-review` rules and conditional stage/timestamp updates. Why: identical spec review on both surfaces, no truncated queue, and no lost concurrent agent notes or duplicate decisions.
 - Agent and account writes share tested `management-input` schemas; pages prime Query data, and agent controls only save external-agent configuration. Why: consistent validation without implying jobs run or social linking is verified by APEX.
+
+- Overview and Earnings prime Query loaders; posts are read in deterministic pages, and shared pure reporting rules separate observed views from unavailable verified counts, net USD estimates from recorded payouts, and denied/unknown/active earning windows. Why: no truncated ledger, invented verification or divergent totals.

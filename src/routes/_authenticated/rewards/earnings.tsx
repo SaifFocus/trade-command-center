@@ -1,11 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { z } from "zod";
+import { ReportingError, ReportingNotFound, useReportingNow } from "@/components/rewards/ReportingState";
+import { earningsReport, isEarning } from "@/lib/cr/reporting";
 import { ExternalLink, Wallet } from "lucide-react";
 import {
   Chip,
   EmptyState,
   Kpi,
-  LoadState,
   PageShell,
   Panel,
   compact,
@@ -17,18 +20,20 @@ import {
 } from "@/components/rewards/kit";
 import {
   PLATFORM_LABEL,
-  WHOP_FEE_PCT,
   approvalRate,
   estimateEarnings,
   formatLeft,
   msLeft,
   netPer1k,
-  viewsForTarget,
 } from "@/lib/cr/logic";
-import { postNet, usePosts, type Post } from "@/lib/cr/queries";
+import { postNet, postsQueryOptions, type Post } from "@/lib/cr/queries";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/rewards/earnings")({
+  validateSearch: z.object({ status: z.enum(["all", "pending", "submitted", "approved", "denied", "window"]).catch("all").default("all") }),
+  loader: ({ context }) => context.queryClient.ensureQueryData(postsQueryOptions),
+  errorComponent: ReportingError,
+  notFoundComponent: ReportingNotFound,
   head: () => ({
     meta: [
       { title: "APEX — Earnings" },
@@ -49,21 +54,21 @@ const SUBMISSION_TONE: Record<string, "neon" | "gold" | "muted" | "danger" | "cy
   denied: "danger",
 };
 
-type StatusFilter = "all" | "pending" | "submitted" | "approved" | "denied" | "window";
+const statusSchema = z.enum(["all", "pending", "submitted", "approved", "denied", "window"]);
 
 function EarningsPage() {
-  const posts = usePosts();
-  const [status, setStatus] = useState<StatusFilter>("all");
-  const [target, setTarget] = useState("1000");
-  const [avgViews, setAvgViews] = useState("10000");
-  const now = Date.now();
+  const posts = useSuspenseQuery(postsQueryOptions);
+  const { status } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const now = useReportingNow();
   const all = useMemo(() => posts.data ?? [], [posts.data]);
 
   const k = useMemo(() => {
     const live = all.filter((p) => p.submission_status !== "denied");
-    const views = all.reduce((s, p) => s + p.views_current, 0);
+    const report = earningsReport(all, now);
+    const views = report.observedViews;
     const earned = live.reduce((s, p) => s + Math.max(postNet(p), p.paid_usd), 0);
-    const paid = all.reduce((s, p) => s + p.paid_usd, 0);
+    const paid = report.paid;
     const belowMin = live.filter((p) => {
       const c = p.cr_clips?.cr_campaigns;
       return c ? estimateEarnings(p.views_current, c).belowMin : false;
@@ -71,14 +76,17 @@ function EarningsPage() {
     return {
       views,
       paid,
-      pending: live.reduce((s, p) => s + Math.max(0, postNet(p) - p.paid_usd), 0),
+      pending: report.pending,
+      verifiedViews: report.verifiedViews,
+      nextEta: report.nextEta,
+      unknownWindow: report.unknownWindow,
       perK: netPer1k(earned, views),
       approval: approvalRate(all),
       decided: all.filter(
         (p) => p.submission_status === "approved" || p.submission_status === "denied",
       ).length,
       belowMin,
-      inWindow: all.filter((p) => (msLeft(p.earning_window_ends_at, now) ?? 0) > 0).length,
+      inWindow: report.inWindow,
     };
   }, [all, now]);
 
@@ -86,6 +94,7 @@ function EarningsPage() {
     const m = new Map<
       string,
       {
+        id: string;
         name: string;
         posts: number;
         views: number;
@@ -99,6 +108,7 @@ function EarningsPage() {
       const c = p.cr_clips?.cr_campaigns;
       const key = c?.id ?? "none";
       const row = m.get(key) ?? {
+        id: key,
         name: c?.title || c?.brand || "Unknown campaign",
         posts: 0,
         views: 0,
@@ -122,37 +132,31 @@ function EarningsPage() {
     status === "all"
       ? true
       : status === "window"
-        ? (msLeft(p.earning_window_ends_at, now) ?? 0) > 0
+        ? isEarning(p, now)
         : p.submission_status === status,
   );
-
-  // Target planner: uses your real net per 1,000 views once there is data, else the ~$1 average CPM.
-  const targetUsd = Number(target) || 0;
-  const avg = Number(avgViews) || 0;
-  const perKNet = k.perK ?? 1 * (1 - WHOP_FEE_PCT);
-  const viewsNeeded = viewsForTarget(targetUsd, perKNet / (1 - WHOP_FEE_PCT));
-  const clipsPerDay = viewsNeeded != null && avg > 0 ? viewsNeeded / avg / 30 : null;
 
   return (
     <PageShell
       title="EARNINGS"
-      subtitle="Views, submissions and payouts per post. Estimates are after the 10% clipper fee; Content Rewards' verified numbers win."
+      subtitle="USD estimates, recorded payments and post earning deadlines."
     >
-      <LoadState loading={posts.isLoading} error={posts.error} />
 
-      <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        <Kpi label="PAID TO DATE" value={usd(k.paid)} sub="settled to your balance" tone="neon" />
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+        <Kpi label="PAID TO DATE" value={usd(k.paid)} sub="recorded payments · USD" tone="neon" />
         <Kpi label="PENDING" value={usd(k.pending)} sub="estimated, not yet paid" tone="gold" />
         <Kpi
-          label="VIEWS"
+          label="OBSERVED VIEWS"
           value={compact(k.views)}
-          sub={`${int(all.length)} posts · ${k.inWindow} still earning`}
+          sub={`${int(all.length)} posts · lifetime counters`}
           tone="cyan"
         />
+        <Kpi label="VERIFIED VIEWS" value={compact(k.verifiedViews)} sub="not reported separately" />
+        <Kpi label="IN EARNING WINDOW" value={k.inWindow} sub={`${k.unknownWindow} deadlines unknown`} />
         <Kpi
           label="NET PER 1K VIEWS"
           value={k.perK != null ? usd(k.perK) : "—"}
-          sub="what a view is really worth"
+          sub="estimated / recorded · observed views"
         />
         <Kpi
           label="APPROVAL RATE"
@@ -190,7 +194,7 @@ function EarningsPage() {
                 </thead>
                 <tbody>
                   {byCampaign.map((r) => (
-                    <tr key={r.name} className="border-t border-border/50">
+                    <tr key={r.id} className="border-t border-border/50">
                       <td className="max-w-[240px] truncate py-1.5 pr-3 text-foreground">
                         {r.name}
                       </td>
@@ -216,56 +220,13 @@ function EarningsPage() {
           )}
         </Panel>
 
-        <Panel title="MONTHLY TARGET">
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1">
-              <span className="text-[10px] tracking-[0.25em] text-muted-foreground">
-                NET TARGET ($/MO)
-              </span>
-              <input
-                className={inputCls}
-                inputMode="decimal"
-                value={target}
-                onChange={(e) => setTarget(e.target.value)}
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-[10px] tracking-[0.25em] text-muted-foreground">
-                AVG VIEWS / CLIP
-              </span>
-              <input
-                className={inputCls}
-                inputMode="numeric"
-                value={avgViews}
-                onChange={(e) => setAvgViews(e.target.value)}
-              />
-            </label>
-          </div>
-          <dl className="mt-4 space-y-2 text-xs">
-            <div className="flex justify-between gap-3">
-              <dt className="text-muted-foreground">Net per 1K views</dt>
-              <dd className="tabular-nums">
-                {usd(perKNet)}{" "}
-                {k.perK == null && <span className="text-muted-foreground">(avg $1 CPM)</span>}
-              </dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-muted-foreground">Paid views needed</dt>
-              <dd className="font-display text-lg font-bold tabular-nums text-[var(--color-usstocks)]">
-                {compact(viewsNeeded)}
-              </dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-muted-foreground">Clips per day</dt>
-              <dd className="font-display text-lg font-bold tabular-nums text-gold">
-                {clipsPerDay != null ? clipsPerDay.toFixed(1) : "—"}
-              </dd>
-            </div>
+        <Panel title="PAYOUT SUMMARY">
+          <dl className="space-y-4 text-xs">
+            <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Estimated unpaid</dt><dd className="tabular-nums text-gold">{usd(k.pending)}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Recorded payments</dt><dd className="tabular-nums text-neon">{usd(k.paid)}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Next unpaid payout ETA</dt><dd className="text-right">{k.nextEta ? when(k.nextEta) : "Not scheduled"}</dd></div>
           </dl>
-          <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
-            Counts only clips that clear each campaign's minimum. Higher-CPM campaigns cut the
-            volume fastest.
-          </p>
+          <p className="mt-5 text-xs text-muted-foreground">Estimates are net of the 10% creator fee. Approval status does not verify view counts; verified views have not been reported separately.</p>
         </Panel>
       </div>
 
@@ -276,7 +237,7 @@ function EarningsPage() {
             <select
               className={cn(inputCls, "w-auto")}
               value={status}
-              onChange={(e) => setStatus(e.target.value as StatusFilter)}
+              onChange={(e) => { const value = statusSchema.parse(e.target.value); void navigate({ search: (prev) => ({ ...prev, status: value }) }); }}
               aria-label="Filter posts"
             >
               <option value="all">All posts</option>
@@ -289,11 +250,11 @@ function EarningsPage() {
           )
         }
       >
-        {!posts.isLoading && all.length === 0 ? (
+        {all.length === 0 ? (
           <EmptyState
             icon={Wallet}
             title="NO POSTS YET"
-            body="Posts appear once an approved clip goes live and the Publisher records its link. The Analyst then fills in views at 24 h, 72 h and 7 days."
+            body="No recorded posts, view metrics or payments yet."
           />
         ) : (
           <div className="overflow-x-auto">
@@ -305,7 +266,8 @@ function EarningsPage() {
                   <th className="py-1 pr-3 text-right font-normal">24H</th>
                   <th className="py-1 pr-3 text-right font-normal">72H</th>
                   <th className="py-1 pr-3 text-right font-normal">7D</th>
-                  <th className="py-1 pr-3 text-right font-normal">NOW</th>
+                  <th className="py-1 pr-3 text-right font-normal">OBSERVED</th>
+                  <th className="py-1 pr-3 font-normal">VERIFIED</th>
                   <th className="py-1 pr-3 font-normal">REVIEW</th>
                   <th className="py-1 pr-3 font-normal">WINDOW</th>
                   <th className="py-1 pr-3 text-right font-normal">EST. NET</th>
@@ -362,6 +324,7 @@ function PostRow({ post: p, now }: { post: Post; now: number }) {
       <td className="py-1.5 pr-3 text-right tabular-nums text-[var(--color-usstocks)]">
         {compact(p.views_current)}
       </td>
+      <td className="py-1.5 pr-3 text-muted-foreground">Not reported</td>
       <td className="py-1.5 pr-3">
         <Chip tone={SUBMISSION_TONE[p.submission_status] ?? "muted"}>
           {p.submission_status === "pending" ? "not submitted" : p.submission_status}
@@ -372,8 +335,9 @@ function PostRow({ post: p, now }: { post: Post; now: number }) {
       </td>
       <td className="whitespace-nowrap py-1.5 pr-3">
         <span className={left != null && left > 0 ? "text-foreground" : "text-muted-foreground"}>
-          {formatLeft(left)}
+          {p.submission_status === "denied" ? "ineligible" : left == null ? "Unknown" : formatLeft(left)}
         </span>
+        {p.earning_window_ends_at && <div className="text-[11px] text-muted-foreground">ends {when(p.earning_window_ends_at)}</div>}
         {p.payout_eta && (
           <div className="text-[11px] text-muted-foreground">payout ~{day(p.payout_eta)}</div>
         )}

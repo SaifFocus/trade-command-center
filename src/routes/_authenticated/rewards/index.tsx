@@ -1,10 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { AlertTriangle, Rocket } from "lucide-react";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { ReportingError, ReportingNotFound, useReportingNow } from "@/components/rewards/ReportingState";
+import { earningsReport } from "@/lib/cr/reporting";
+import { AlertTriangle, Layers } from "lucide-react";
 import {
   Chip,
   Kpi,
-  LoadState,
+  EmptyState,
   PageShell,
   Panel,
   StatusDot,
@@ -16,16 +19,14 @@ import {
 } from "@/components/rewards/kit";
 import { CLIP_STAGES, IN_PIPELINE, STAGE_LABEL, budgetShare, isBudgetLow } from "@/lib/cr/logic";
 import {
-  postNet,
-  useAgentRuns,
-  useAgents,
-  useAccounts,
-  useCampaigns,
-  useClips,
-  usePosts,
+  campaignsQueryOptions, clipsQueryOptions, postsQueryOptions,
+  agentsQueryOptions, agentRunsQueryOptions,
 } from "@/lib/cr/queries";
 
 export const Route = createFileRoute("/_authenticated/rewards/")({
+  loader: ({ context }) => Promise.all([context.queryClient.ensureQueryData(campaignsQueryOptions), context.queryClient.ensureQueryData(clipsQueryOptions), context.queryClient.ensureQueryData(postsQueryOptions), context.queryClient.ensureQueryData(agentsQueryOptions), context.queryClient.ensureQueryData(agentRunsQueryOptions(8))]),
+  errorComponent: ReportingError,
+  notFoundComponent: ReportingNotFound,
   head: () => ({
     meta: [
       { title: "APEX — Content Rewards" },
@@ -40,38 +41,29 @@ export const Route = createFileRoute("/_authenticated/rewards/")({
 });
 
 function Overview() {
-  const campaigns = useCampaigns();
-  const clips = useClips();
-  const posts = usePosts();
-  const agents = useAgents();
-  const runs = useAgentRuns(8);
-  const accounts = useAccounts();
-  const now = Date.now();
+  const campaigns = useSuspenseQuery(campaignsQueryOptions);
+  const clips = useSuspenseQuery(clipsQueryOptions);
+  const posts = useSuspenseQuery(postsQueryOptions);
+  const agents = useSuspenseQuery(agentsQueryOptions);
+  const runs = useSuspenseQuery(agentRunsQueryOptions(8));
+  const now = useReportingNow();
 
   const k = useMemo(() => {
     const cs = campaigns.data ?? [];
     const cl = clips.data ?? [];
     const ps = posts.data ?? [];
-    const weekAgo = now - 7 * 864e5;
-    const live = ps.filter((p) => p.submission_status !== "denied");
-    const etas = live
-      .filter((p) => p.payout_eta && Date.parse(p.payout_eta) > now && p.paid_usd < postNet(p))
-      .map((p) => p.payout_eta as string)
-      .sort();
+    const report = earningsReport(ps, now);
     return {
       active: cs.filter((c) => c.status === "active").length,
       watching: cs.filter((c) => c.status === "watching").length,
-      inPipeline: cl.filter((c) => IN_PIPELINE.includes(c.stage as never)).length,
+      inPipeline: cl.filter((c) => IN_PIPELINE.some((stage) => stage === c.stage)).length,
       awaiting: cl.filter((c) => c.stage === "awaiting_approval").length,
-      inWindow: ps.filter(
-        (p) => p.earning_window_ends_at && Date.parse(p.earning_window_ends_at) > now,
-      ).length,
-      views7d: ps
-        .filter((p) => p.posted_at && Date.parse(p.posted_at) >= weekAgo)
-        .reduce((s, p) => s + p.views_current, 0),
-      pending: live.reduce((s, p) => s + Math.max(0, postNet(p) - p.paid_usd), 0),
-      paid: ps.reduce((s, p) => s + p.paid_usd, 0),
-      nextEta: etas[0] ?? null,
+      inWindow: report.inWindow,
+      observedViews: report.observedViews,
+      verifiedViews: report.verifiedViews,
+      pending: report.pending,
+      paid: report.paid,
+      nextEta: report.nextEta,
       low: cs.filter((c) => isBudgetLow(c)),
       stageCounts: CLIP_STAGES.map((s) => ({
         stage: s,
@@ -81,10 +73,7 @@ function Overview() {
   }, [campaigns.data, clips.data, posts.data, now]);
 
   const agentName = (key: string) => agents.data?.find((a) => a.key === key)?.name ?? key;
-  const loading = campaigns.isLoading || clips.isLoading || posts.isLoading;
-  const error = campaigns.error || clips.error || posts.error;
-  const fresh =
-    !loading && !error && (campaigns.data?.length ?? 0) === 0 && (accounts.data?.length ?? 0) === 0;
+  const fresh = campaigns.data.length === 0 && clips.data.length === 0 && posts.data.length === 0;
   const maxStage = Math.max(
     1,
     ...k.stageCounts.filter((s) => s.stage !== "denied").map((s) => s.n),
@@ -93,39 +82,11 @@ function Overview() {
   return (
     <PageShell
       title="OVERVIEW"
-      subtitle="Campaigns, clips and payouts from the Content Rewards agents."
+      subtitle="Pipeline, post performance and USD payouts."
     >
-      <LoadState loading={loading} error={error} />
+      {fresh && <EmptyState icon={Layers} title="NO CAMPAIGNS OR CLIPS YET" body="No campaign, clip or post records available." />}
 
-      {fresh && (
-        <Panel title="GET STARTED">
-          <div className="flex items-start gap-3">
-            <Rocket className="mt-0.5 size-5 shrink-0 text-gold" />
-            <ol className="list-decimal space-y-1 pl-4 text-xs text-muted-foreground">
-              <li>
-                Link your posting accounts in Content Rewards, then add them under{" "}
-                <Link to="/rewards/accounts" className="text-neon hover:underline">
-                  Accounts
-                </Link>
-                .
-              </li>
-              <li>
-                Add a campaign you want to clip under{" "}
-                <Link to="/rewards/campaigns" className="text-neon hover:underline">
-                  Campaigns
-                </Link>
-                , or let the Campaign Scout agent find them.
-              </li>
-              <li>
-                Run a clipping cycle with the agents; clips that pass QA land in Approvals for your
-                sign-off.
-              </li>
-            </ol>
-          </div>
-        </Panel>
-      )}
-
-      <section className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-4">
         <Kpi
           label="ACTIVE CAMPAIGNS"
           value={k.active}
@@ -148,11 +109,12 @@ function Overview() {
         />
         <Kpi label="IN EARNING WINDOW" value={k.inWindow} sub="posts still counting views" />
         <Kpi
-          label="VIEWS · LAST 7D"
-          value={compact(k.views7d)}
-          sub="posts from the last 7 days"
+          label="OBSERVED VIEWS"
+          value={compact(k.observedViews)}
+          sub="lifetime · reported counters"
           tone="cyan"
         />
+        <Kpi label="VERIFIED VIEWS" value={compact(k.verifiedViews)} sub="not reported separately" />
         <Kpi
           label="PENDING EARNINGS"
           value={usd(k.pending)}
@@ -293,8 +255,8 @@ function Overview() {
         )}
       </Panel>
 
-      <p className="text-center text-[10px] tracking-[0.3em] text-muted-foreground">
-        ESTIMATES USE EACH CAMPAIGN'S RATE, MINIMUM, CAP AND THE 10% FEE · VERIFIED NUMBERS WIN ·{" "}
+      <p className="text-center text-[10px] text-muted-foreground">
+        PAYOUT ESTIMATES · NET OF CREATOR FEE ·{" "}
         <Chip tone="muted">USD</Chip>
       </p>
     </PageShell>

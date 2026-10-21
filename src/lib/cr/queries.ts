@@ -1,7 +1,7 @@
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { estimateEarnings, isBudgetLow } from "./logic";
+import { isBudgetLow } from "./logic";
 import { estimatedNet } from "./reporting";
 
 // Browser reads for the /rewards pages. RLS limits every cr_* table to the owner (SELECT only).
