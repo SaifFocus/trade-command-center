@@ -1,7 +1,8 @@
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { estimateEarnings, isBudgetLow } from "./logic";
+import { isBudgetLow } from "./logic";
+import { estimatedNet } from "./reporting";
 
 // Browser reads for the /rewards pages. RLS limits every cr_* table to the owner (SELECT only).
 
@@ -79,16 +80,17 @@ export function useClips() {
 export const postsQueryOptions = queryOptions({
     queryKey: ["cr", "posts"],
     refetchInterval: REFRESH,
-    queryFn: () =>
-      must<Post[]>(
-        supabase
-          .from("cr_posts")
-          .select(
-            "*, cr_clips(id, hook, variant, campaign_id, cr_campaigns(id, title, brand, rate_per_1k_usd, min_payout_usd, max_payout_usd, flat_fee_usd)), cr_accounts(id, platform, handle)",
-          )
-          .order("posted_at", { ascending: false, nullsFirst: false })
-          .limit(1000),
-      ),
+    queryFn: async () => {
+      const posts: Post[] = [];
+      for (let offset = 0; ; offset += 500) {
+        const page = await must<Post[]>(supabase.from("cr_posts")
+          .select("*, cr_clips(id, hook, variant, campaign_id, cr_campaigns(id, title, brand, rate_per_1k_usd, min_payout_usd, max_payout_usd, flat_fee_usd)), cr_accounts(id, platform, handle)")
+          .order("posted_at", { ascending: false, nullsFirst: false }).order("id")
+          .range(offset, offset + 499));
+        posts.push(...page);
+        if (page.length < 500) return posts;
+      }
+    },
   });
 export function usePosts() {
   return useQuery(postsQueryOptions);
@@ -178,8 +180,5 @@ export function useRefreshCr() {
 
 /** Net estimate for a post: the Analyst's stored figure when present, else computed from views. */
 export function postNet(p: Post): number {
-  if (p.est_earnings_usd > 0) return p.est_earnings_usd;
-  const c = p.cr_clips?.cr_campaigns;
-  if (!c) return 0;
-  return estimateEarnings(p.views_current, c).net;
+  return estimatedNet(p);
 }
