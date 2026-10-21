@@ -11,6 +11,10 @@ export const Route = createFileRoute("/_authenticated/rewards/pipeline")({
     meta: [
       { title: "APEX — Clip Pipeline" },
       { name: "description", content: "Every clip by stage." },
+      { property: "og:title", content: "APEX — Clip Pipeline" },
+      { property: "og:description", content: "Every clip by stage." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: PipelinePage,

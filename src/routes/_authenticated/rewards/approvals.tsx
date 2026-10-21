@@ -23,6 +23,10 @@ export const Route = createFileRoute("/_authenticated/rewards/approvals")({
     meta: [
       { title: "APEX — Approvals" },
       { name: "description", content: "Clips waiting for the owner's sign-off." },
+      { property: "og:title", content: "APEX — Approvals" },
+      { property: "og:description", content: "Clips waiting for the owner's sign-off." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: ApprovalsPage,

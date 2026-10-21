@@ -11,6 +11,6 @@
 
 # Roadmap — Content Rewards
 - [x] Database: cr_* tables, owner-only read, agent write functions, nine agents seeded
-- [ ] Finish and verify sidebar navigation (groups, badges, Ctrl/Cmd+K, mobile drawer) + slim header; preserve trading content
+- [x] Sidebar navigation (groups, badges, Ctrl/Cmd+K, mobile drawer) + slim header; trading content preserved
 - [ ] Owner server functions (campaigns, clip approve/reject, accounts, agent toggles)
 - [ ] Pages: Overview, Campaigns, Pipeline, Approvals, Agents, Earnings, Accounts (empty states, USD)

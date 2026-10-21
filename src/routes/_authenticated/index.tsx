@@ -13,6 +13,10 @@ export const Route = createFileRoute("/_authenticated/")({
     meta: [
       { title: "APEX — Dashboard" },
       { name: "description", content: "Private APEX trading dashboard." },
+      { property: "og:title", content: "APEX — Dashboard" },
+      { property: "og:description", content: "Private APEX trading dashboard." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Dashboard,
