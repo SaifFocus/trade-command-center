@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/command";
 import { useSignOut } from "@/lib/auth/use-sign-out";
 import { useSidebar } from "@/components/ui/sidebar";
-import { NAV_GROUPS } from "./nav-config";
+import { NAV_GROUPS, isExternal, navKey } from "./nav-config";
 
 /** Ctrl/Cmd+K jump menu over every page in the sidebar. */
 export function CommandPalette({
@@ -56,14 +56,22 @@ export function CommandPalette({
                 const Icon = item.icon;
                 return (
                   <CommandItem
-                    key={item.to}
+                    key={navKey(item)}
                     value={`${group.label} ${item.label} ${item.keywords ?? ""}`}
-                    onSelect={() => run(() => navigate({ to: item.to }))}
+                    onSelect={() =>
+                      run(() =>
+                        isExternal(item)
+                          ? void window.open(item.href, "_blank", "noopener,noreferrer")
+                          : void navigate({ to: item.to }),
+                      )
+                    }
                     className="gap-2 text-xs tracking-wider"
                   >
                     <Icon className="size-4 text-neon" />
                     <span>{item.label}</span>
-                    <span className="ml-auto text-[10px] text-muted-foreground">{item.to}</span>
+                    <span className="ml-auto text-[10px] text-muted-foreground">
+                      {isExternal(item) ? "new tab ↗" : item.to}
+                    </span>
                   </CommandItem>
                 );
               })}

@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Command as CommandIcon, LogOut, PanelLeft } from "lucide-react";
+import { Command as CommandIcon, ExternalLink, LogOut, PanelLeft } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -20,7 +20,7 @@ import { useSignOut } from "@/lib/auth/use-sign-out";
 import { useDeskMode, useNavCounts } from "@/lib/cr/queries";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { NAV_GROUPS, isActive, type NavBadge } from "./nav-config";
+import { NAV_GROUPS, isActive, isExternal, navKey, type NavBadge } from "./nav-config";
 
 const MOD_KEY =
   typeof navigator !== "undefined" && /Mac|iPhone|iPad/i.test(navigator.userAgent) ? "⌘" : "Ctrl ";
@@ -103,27 +103,51 @@ export function AppSidebar({ onOpenPalette }: { onOpenPalette: () => void }) {
                   const count = badgeFor(item.badge);
                   const Icon = item.icon;
                   return (
-                    <SidebarMenuItem key={item.to}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={active}
-                        tooltip={count > 0 ? `${item.label} · ${count}` : item.label}
-                        className={itemClass}
-                      >
-                        <Link to={item.to} onClick={close}>
-                          <Icon className={cn(active ? "text-neon" : "text-muted-foreground")} />
-                          <span>{item.label}</span>
-                          {collapsed && count > 0 && (
-                            <span
-                              aria-hidden="true"
-                              className={cn(
-                                "absolute right-1 top-1 size-1.5 rounded-full",
-                                item.badge === "lowBudget" ? "bg-destructive" : "bg-[var(--gold)]",
-                              )}
+                    <SidebarMenuItem key={navKey(item)}>
+                      {isExternal(item) ? (
+                        <SidebarMenuButton
+                          asChild
+                          tooltip={`${item.label} (opens in a new tab)`}
+                          className={itemClass}
+                        >
+                          <a
+                            href={item.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={close}
+                          >
+                            <Icon className="text-muted-foreground" />
+                            <span>{item.label}</span>
+                            <ExternalLink
+                              aria-label="opens in a new tab"
+                              className="ml-auto size-3 text-muted-foreground group-data-[collapsible=icon]:hidden"
                             />
-                          )}
-                        </Link>
-                      </SidebarMenuButton>
+                          </a>
+                        </SidebarMenuButton>
+                      ) : (
+                        <SidebarMenuButton
+                          asChild
+                          isActive={active}
+                          tooltip={count > 0 ? `${item.label} · ${count}` : item.label}
+                          className={itemClass}
+                        >
+                          <Link to={item.to} onClick={close}>
+                            <Icon className={cn(active ? "text-neon" : "text-muted-foreground")} />
+                            <span>{item.label}</span>
+                            {collapsed && count > 0 && (
+                              <span
+                                aria-hidden="true"
+                                className={cn(
+                                  "absolute right-1 top-1 size-1.5 rounded-full",
+                                  item.badge === "lowBudget"
+                                    ? "bg-destructive"
+                                    : "bg-[var(--gold)]",
+                                )}
+                              />
+                            )}
+                          </Link>
+                        </SidebarMenuButton>
+                      )}
                       {count > 0 && (
                         <SidebarMenuBadge
                           className={cn(
