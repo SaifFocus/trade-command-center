@@ -19,6 +19,7 @@ import {
 import { useSignOut } from "@/lib/auth/use-sign-out";
 import { useDeskMode, useNavCounts } from "@/lib/cr/queries";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { NAV_GROUPS, isActive, type NavBadge } from "./nav-config";
 
 const MOD_KEY =
@@ -59,15 +60,17 @@ export function AppSidebar({ onOpenPalette }: { onOpenPalette: () => void }) {
               COMMAND CENTER
             </span>
           </Link>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             type="button"
             onClick={toggleSidebar}
-            aria-label={collapsed ? "Expand menu" : "Collapse menu"}
+            aria-label={isMobile ? "Close menu" : collapsed ? "Expand menu" : "Collapse menu"}
             title={collapsed ? "Expand menu (Ctrl/Cmd+B)" : "Collapse menu (Ctrl/Cmd+B)"}
             className="grid size-8 shrink-0 place-items-center rounded border border-sidebar-border text-muted-foreground transition-colors hover:border-[var(--neon)] hover:text-neon"
           >
             <PanelLeft className="size-4" />
-          </button>
+          </Button>
         </div>
       </SidebarHeader>
 

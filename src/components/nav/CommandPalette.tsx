@@ -11,6 +11,7 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { useSignOut } from "@/lib/auth/use-sign-out";
+import { useSidebar } from "@/components/ui/sidebar";
 import { NAV_GROUPS } from "./nav-config";
 
 /** Ctrl/Cmd+K jump menu over every page in the sidebar. */
@@ -22,6 +23,7 @@ export function CommandPalette({
   onOpenChange: (open: boolean) => void;
 }) {
   const navigate = useNavigate();
+  const { setOpenMobile } = useSidebar();
   const signOut = useSignOut();
 
   useEffect(() => {
@@ -37,6 +39,7 @@ export function CommandPalette({
 
   const run = (fn: () => void) => {
     onOpenChange(false);
+    setOpenMobile(false);
     fn();
   };
 
