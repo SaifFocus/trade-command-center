@@ -10,6 +10,7 @@
 - [ ] /scout page + header link
 
 # Roadmap — Content Rewards
+- [ ] Complete Campaigns sorting/filtering, details, budget alerts and owner add/edit/status actions; verify saved changes
 - [x] Database: cr_* tables, owner-only read, agent write functions, nine agents seeded
 - [x] Sidebar navigation (groups, badges, Ctrl/Cmd+K, mobile drawer) + slim header; trading content preserved
 - [ ] Owner server functions (campaigns, clip approve/reject, accounts, agent toggles)
