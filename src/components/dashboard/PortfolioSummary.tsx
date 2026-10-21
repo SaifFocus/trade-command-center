@@ -48,7 +48,9 @@ export function PortfolioSummary({ markets }: { markets: Market[] }) {
                 {data.map((d) => <Cell key={d.name} fill={d.color} />)}
               </Pie>
               <Tooltip
-                contentStyle={{ background: "var(--terminal)", border: "1px solid var(--border)", fontSize: 11 }}
+                contentStyle={{ background: "var(--terminal)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 11, color: "var(--foreground)" }}
+                itemStyle={{ color: "var(--foreground)" }}
+                labelStyle={{ color: "var(--foreground)" }}
                 formatter={(v: number, n) => [`${v} SEK`, n]}
               />
             </PieChart>
