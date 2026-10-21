@@ -76,8 +76,7 @@ export function useClips() {
   return useQuery(clipsQueryOptions);
 }
 
-export function usePosts() {
-  return useQuery({
+export const postsQueryOptions = queryOptions({
     queryKey: ["cr", "posts"],
     refetchInterval: REFRESH,
     queryFn: () =>
@@ -91,6 +90,8 @@ export function usePosts() {
           .limit(1000),
       ),
   });
+export function usePosts() {
+  return useQuery(postsQueryOptions);
 }
 
 export const accountsQueryOptions = queryOptions({
@@ -103,16 +104,16 @@ export function useAccounts() {
   return useQuery(accountsQueryOptions);
 }
 
-export function useAgents() {
-  return useQuery({
+export const agentsQueryOptions = queryOptions({
     queryKey: ["cr", "agents"],
     refetchInterval: REFRESH,
     queryFn: () => must<Agent[]>(supabase.from("cr_agents").select("*").order("sort")),
   });
+export function useAgents() {
+  return useQuery(agentsQueryOptions);
 }
 
-export function useAgentRuns(limit = 50) {
-  return useQuery({
+export const agentRunsQueryOptions = (limit = 50) => queryOptions({
     queryKey: ["cr", "runs", limit],
     refetchInterval: REFRESH,
     queryFn: () =>
@@ -121,9 +122,12 @@ export function useAgentRuns(limit = 50) {
           .from("cr_agent_runs")
           .select("*")
           .order("started_at", { ascending: false })
+          .order("id", { ascending: false })
           .limit(limit),
       ),
   });
+export function useAgentRuns(limit = 50) {
+  return useQuery(agentRunsQueryOptions(limit));
 }
 
 /** Sidebar badges: clips waiting for approval and active campaigns under 15% budget. */

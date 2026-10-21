@@ -2,15 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertOwner } from "@/lib/auth/owner.server";
-import { ACCOUNT_STATUSES, AUTONOMY, CAMPAIGN_STATUSES, PLATFORMS } from "./logic";
+import { CAMPAIGN_STATUSES } from "./logic";
 import { campaignInput } from "./campaign-input";
 import { clipReviewInput, clipReviewUpdate } from "./clip-review";
+import { accountInput, agentInput } from "./management-input";
 
 // Owner-only Content Rewards actions. Reads happen in the browser under the owner-only SELECT
 // policies; every write goes through here (requireSupabaseAuth + assertOwner, then service role).
 // External agents never use these: they write through the service_role-only cr_* SQL functions.
-
-const text = (max: number) => z.string().trim().max(max).nullable().optional();
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -83,16 +82,7 @@ export const reviewClipFn = createServerFn({ method: "POST" })
 
 export const saveAccountFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
-    z.object({
-      id: z.string().uuid().optional(),
-      platform: z.enum(PLATFORMS),
-      handle: z.string().trim().min(1).max(100),
-      linked_in_whop: z.boolean(),
-      status: z.enum(ACCOUNT_STATUSES),
-      notes: text(1000),
-    }),
-  )
+  .inputValidator(accountInput)
   .handler(async ({ context, data }) => {
     await assertOwner(context.supabase);
     const db = await admin();
@@ -111,17 +101,7 @@ export const saveAccountFn = createServerFn({ method: "POST" })
 
 export const updateAgentFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
-    z
-      .object({
-        key: z.string().min(1).max(60),
-        enabled: z.boolean().optional(),
-        autonomy: z.enum(AUTONOMY).optional(),
-      })
-      .refine((v) => v.enabled !== undefined || v.autonomy !== undefined, {
-        message: "Nothing to change.",
-      }),
-  )
+  .inputValidator(agentInput)
   .handler(async ({ context, data }) => {
     await assertOwner(context.supabase);
     const db = await admin();
