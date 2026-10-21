@@ -201,7 +201,7 @@ export function CampaignForm({
             </select>
           </Field>
           <Field label="STATUS">
-            <select className={inputCls} value={f.status} onChange={set("status")}>
+            <select aria-label="STATUS" className={inputCls} value={f.status} onChange={set("status")}>
               {CAMPAIGN_STATUSES.map((s) => (
                 <option key={s} value={s}>
                   {s}
@@ -366,7 +366,7 @@ export function CampaignForm({
             />
           </Field>
           <Field label="RED FLAGS (ONE PER LINE)" className="sm:col-span-2">
-            <textarea className={cn(inputCls, "min-h-14")} value={f.red_flags} onChange={set("red_flags")} />
+            <textarea aria-label="RED FLAGS (ONE PER LINE)" className={cn(inputCls, "min-h-14")} value={f.red_flags} onChange={set("red_flags")} />
           </Field>
         </div>
 

@@ -310,7 +310,7 @@ function CampaignsPage() {
       <CampaignDrawer
         campaign={open}
         onClose={() => setOpenId(null)}
-        onEdit={(c) => setForm({ open: true, campaign: c })}
+        onEdit={(c) => { setOpenId(null); setForm({ open: true, campaign: c }); }}
         onChanged={refresh}
       />
 
