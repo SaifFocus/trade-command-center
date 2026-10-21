@@ -8,7 +8,11 @@ import { ownerExistsFn } from "@/lib/auth/owner.functions";
 
 export const Route = createFileRoute("/login")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Sign in — APEX" }, { name: "description", content: "Private access." }] }),
+  head: () => ({ meta: [{ title: "Sign in — APEX" }, { name: "description", content: "Private access." },
+      { property: "og:title", content: "Sign in — APEX" },
+      { property: "og:description", content: "Private access." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" }] }),
   component: LoginPage,
 });
 

@@ -32,6 +32,10 @@ export const Route = createFileRoute("/_authenticated/rewards/accounts")({
     meta: [
       { title: "APEX — Accounts" },
       { name: "description", content: "Social accounts that post Content Rewards clips." },
+      { property: "og:title", content: "APEX — Accounts" },
+      { property: "og:description", content: "Social accounts that post Content Rewards clips." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: AccountsPage,

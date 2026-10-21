@@ -7,7 +7,11 @@ import { runCopyBacktestFn, syncCopyDataFn } from "@/lib/sm/scout.functions";
 import { mimicExit } from "@/lib/sm/mimic";
 
 export const Route = createFileRoute("/_authenticated/scout")({
-  head: () => ({ meta: [{ title: "APEX — Scout" }, { name: "description", content: "Graded traders, live events and the copy backtest." }] }),
+  head: () => ({ meta: [{ title: "APEX — Scout" }, { name: "description", content: "Graded traders, live events and the copy backtest." },
+      { property: "og:title", content: "APEX — Scout" },
+      { property: "og:description", content: "Graded traders, live events and the copy backtest." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" }] }),
   component: ScoutPage,
 });
 

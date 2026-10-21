@@ -550,17 +550,17 @@ export type Database = {
           live_trip_reason: string | null
           live_trip_streak: number
           live_whitelist: string[]
-          paper_budget_usd: number | null
-          paper_max_open: number | null
-          paper_max_same_side: number | null
-          paper_risk_pct: number | null
           max_entries_per_day: number
           max_open: number
           max_risk_pct: number
           min_order_usd: number
           mode: string
           night_rule: boolean
+          paper_budget_usd: number | null
           paper_extra_coins: string[]
+          paper_max_open: number | null
+          paper_max_same_side: number | null
+          paper_risk_pct: number | null
           review_window_minutes: number
           risk_pct: number
           slip_pct: number
@@ -591,17 +591,17 @@ export type Database = {
           live_trip_reason?: string | null
           live_trip_streak?: number
           live_whitelist?: string[]
-          paper_budget_usd?: number | null
-          paper_max_open?: number | null
-          paper_max_same_side?: number | null
-          paper_risk_pct?: number | null
           max_entries_per_day?: number
           max_open?: number
           max_risk_pct?: number
           min_order_usd?: number
           mode?: string
           night_rule?: boolean
+          paper_budget_usd?: number | null
           paper_extra_coins?: string[]
+          paper_max_open?: number | null
+          paper_max_same_side?: number | null
+          paper_risk_pct?: number | null
           review_window_minutes?: number
           risk_pct?: number
           slip_pct?: number
@@ -632,17 +632,17 @@ export type Database = {
           live_trip_reason?: string | null
           live_trip_streak?: number
           live_whitelist?: string[]
-          paper_budget_usd?: number | null
-          paper_max_open?: number | null
-          paper_max_same_side?: number | null
-          paper_risk_pct?: number | null
           max_entries_per_day?: number
           max_open?: number
           max_risk_pct?: number
           min_order_usd?: number
           mode?: string
           night_rule?: boolean
+          paper_budget_usd?: number | null
           paper_extra_coins?: string[]
+          paper_max_open?: number | null
+          paper_max_same_side?: number | null
+          paper_risk_pct?: number | null
           review_window_minutes?: number
           risk_pct?: number
           slip_pct?: number
@@ -736,6 +736,69 @@ export type Database = {
           max_leverage?: number | null
           open_interest?: number | null
           snapshot_at?: string
+        }
+        Relationships: []
+      }
+      invo_bridge_raw: {
+        Row: {
+          at: string
+          final_url: string | null
+          note: string | null
+          payload: Json | null
+          portfolio_id: string
+        }
+        Insert: {
+          at?: string
+          final_url?: string | null
+          note?: string | null
+          payload?: Json | null
+          portfolio_id: string
+        }
+        Update: {
+          at?: string
+          final_url?: string | null
+          note?: string | null
+          payload?: Json | null
+          portfolio_id?: string
+        }
+        Relationships: []
+      }
+      invo_bridge_runs: {
+        Row: {
+          at: string
+          events: number
+          host: string | null
+          id: number
+          logged_out: boolean
+          parsed: number
+          positions: number
+          problems: Json | null
+          version: string | null
+          visited: number
+        }
+        Insert: {
+          at?: string
+          events?: number
+          host?: string | null
+          id?: number
+          logged_out?: boolean
+          parsed?: number
+          positions?: number
+          problems?: Json | null
+          version?: string | null
+          visited?: number
+        }
+        Update: {
+          at?: string
+          events?: number
+          host?: string | null
+          id?: number
+          logged_out?: boolean
+          parsed?: number
+          positions?: number
+          problems?: Json | null
+          version?: string | null
+          visited?: number
         }
         Relationships: []
       }
@@ -2026,6 +2089,12 @@ export type Database = {
       }
       hl_backtest_data: { Args: { p_coin: string }; Returns: Json }
       hl_latest_t: { Args: { p_coin: string }; Returns: Json }
+      invo_bridge_prune: { Args: never; Returns: undefined }
+      invo_follow_drop: { Args: { p_address: string }; Returns: string }
+      invo_follow_set: {
+        Args: { p_address: string; p_note: string; p_username: string }
+        Returns: string
+      }
       is_owner: { Args: never; Returns: boolean }
       live_lock: {
         Args: { p_owner: string; p_seconds: number }

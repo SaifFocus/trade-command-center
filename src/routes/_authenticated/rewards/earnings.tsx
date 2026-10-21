@@ -33,6 +33,10 @@ export const Route = createFileRoute("/_authenticated/rewards/earnings")({
     meta: [
       { title: "APEX — Earnings" },
       { name: "description", content: "Views, submissions and payouts per post." },
+      { property: "og:title", content: "APEX — Earnings" },
+      { property: "og:description", content: "Views, submissions and payouts per post." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: EarningsPage,

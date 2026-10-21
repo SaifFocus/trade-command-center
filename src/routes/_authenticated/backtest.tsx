@@ -9,6 +9,10 @@ export const Route = createFileRoute("/_authenticated/backtest")({
     meta: [
       { title: "APEX — Backtest" },
       { name: "description", content: "Private backtest console." },
+      { property: "og:title", content: "APEX — Backtest" },
+      { property: "og:description", content: "Private backtest console." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: BacktestPage,

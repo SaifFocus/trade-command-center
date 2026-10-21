@@ -1,0 +1,10 @@
+# Scoped project rules
+
+
+- Hyperliquid market data is fetched only from the public info API in `src/lib/hl/*.server.ts` and written with the service-role client. Why: no keys/wallets, writes only from server code.
+- Full sync runs one coin per server-function call (UI loops); the cron route `/api/cron/hl-sync` does incremental sync and self-throttles (skips if synced < 30 min ago). Why: worker request time limits.
+- A trigger on `auth.users` rejects sign-ups once an owner exists. Why: auth-level sign-up block.
+- Paper desk: `src/lib/hl/desk.server.ts` runs cycle (sync, FX, manage, signals) and execute (expire, shadow, risk, fill); cron routes `/api/cron/desk-cycle` and `/api/cron/desk-execute` replace the old hl-sync job. Why: the review window has to sit between signal creation and execution.
+- Trade management (`stepPosition`) and signals (`signalsAt`, `regimeAt`) live only in `engine.ts` and are shared by backtest and paper desk. Why: paper results have to match the backtest.
+- Hyperliquid's $10 minimum applies to every order except a reduce-only order that closes the whole position, so T1/T2 split only when both halves clear it. `live.sim.test.ts` runs the whole flow against `testing/fakes.ts`. Keep it passing before touching live code.
+- Per-setup trade management lives only in `MGMT` / `mgmtFor` in `engine.ts` (targets, partial size, break-even, time stop, stop-distance band), used by the backtest, the paper desk and paper sizing. `volume_breakout` (4H close beyond the prior 18-bar range on >2x the 48-bar average volume, on the side of the coin's 4H EMA200; stop 3x 4H ATR; half off at +1R with the stop left in place, the rest at +4R or after 42 bars) is paper only until someone adds it to `live_setups`. Paper-only columns `paper_budget_usd`, `paper_risk_pct`, `paper_max_open`, `paper_max_same_side` override the shared ones for paper; the live desk keeps `budget_sek`, `risk_pct`, `max_open`. Why: one definition of how each trade is managed, and new setups prove themselves on paper without changing the real-money rules.

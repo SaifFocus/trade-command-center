@@ -9,7 +9,11 @@ import { InvoTickets } from "@/components/desk/InvoTickets";
 import type { Database } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/_authenticated/desk")({
-  head: () => ({ meta: [{ title: "APEX — Desk" }, { name: "description", content: "Private trading desk." }] }),
+  head: () => ({ meta: [{ title: "APEX — Desk" }, { name: "description", content: "Private trading desk." },
+      { property: "og:title", content: "APEX — Desk" },
+      { property: "og:description", content: "Private trading desk." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" }] }),
   component: DeskPage,
 });
 
