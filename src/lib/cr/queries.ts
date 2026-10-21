@@ -54,19 +54,26 @@ export function useCampaigns() {
   return useQuery(campaignsQueryOptions);
 }
 
-export function useClips() {
-  return useQuery({
+export const clipsQueryOptions = queryOptions({
     queryKey: ["cr", "clips"],
     refetchInterval: REFRESH,
-    queryFn: () =>
-      must<Clip[]>(
-        supabase
+    queryFn: async () => {
+      const clips: Clip[] = [];
+      for (let offset = 0; ; offset += 500) {
+        const page = await must<Clip[]>(supabase
           .from("cr_clips")
           .select("*, cr_campaigns(id, title, brand), cr_posts(id, account_id, platform)")
           .order("updated_at", { ascending: false })
-          .limit(1000),
-      ),
+          .order("id")
+          .range(offset, offset + 499));
+        clips.push(...page);
+        if (page.length < 500) return clips;
+      }
+    },
   });
+
+export function useClips() {
+  return useQuery(clipsQueryOptions);
 }
 
 export function usePosts() {
@@ -86,13 +93,14 @@ export function usePosts() {
   });
 }
 
-export function useAccounts() {
-  return useQuery({
+export const accountsQueryOptions = queryOptions({
     queryKey: ["cr", "accounts"],
     refetchInterval: REFRESH,
     queryFn: () =>
       must<Account[]>(supabase.from("cr_accounts").select("*").order("platform").order("handle")),
   });
+export function useAccounts() {
+  return useQuery(accountsQueryOptions);
 }
 
 export function useAgents() {

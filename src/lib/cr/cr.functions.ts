@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertOwner } from "@/lib/auth/owner.server";
 import { ACCOUNT_STATUSES, AUTONOMY, CAMPAIGN_STATUSES, PLATFORMS } from "./logic";
 import { campaignInput } from "./campaign-input";
+import { clipReviewInput, clipReviewUpdate } from "./clip-review";
 
 // Owner-only Content Rewards actions. Reads happen in the browser under the owner-only SELECT
 // policies; every write goes through here (requireSupabaseAuth + assertOwner, then service role).
@@ -56,39 +57,23 @@ export const setCampaignStatusFn = createServerFn({ method: "POST" })
 /** Approve or reject a clip waiting for the owner. Only moves clips that are still awaiting approval. */
 export const reviewClipFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
-    z
-      .object({
-        id: z.string().uuid(),
-        decision: z.enum(["approve", "reject"]),
-        note: z.string().trim().max(2000).optional(),
-      })
-      .refine((v) => v.decision === "approve" || (v.note ?? "").length > 0, {
-        message: "Add a note so the agents know why it was rejected.",
-      }),
-  )
+  .inputValidator(clipReviewInput)
   .handler(async ({ context, data }) => {
     await assertOwner(context.supabase);
     const db = await admin();
     const { data: clip, error: readErr } = await db
       .from("cr_clips")
-      .select("stage, qa_notes")
+      .select("stage, qa_notes, updated_at")
       .eq("id", data.id)
       .single();
     if (readErr || !clip) fail("Clip not found.", readErr);
-    if (clip.stage !== "awaiting_approval")
-      throw new Error("This clip is no longer waiting for approval.");
     const stamp = new Date().toISOString();
-    const line = `[${stamp.slice(0, 16).replace("T", " ")} owner ${data.decision === "approve" ? "approved" : "rejected"}]${data.note ? ` ${data.note}` : ""}`;
     const { data: updated, error } = await db
       .from("cr_clips")
-      .update({
-        stage: data.decision === "approve" ? "approved" : "denied",
-        qa_notes: clip.qa_notes ? `${clip.qa_notes}\n${line}` : line,
-        updated_at: stamp,
-      })
+      .update(clipReviewUpdate(clip.stage, clip.qa_notes, data.decision, data.note, stamp))
       .eq("id", data.id)
       .eq("stage", "awaiting_approval")
+      .eq("updated_at", clip.updated_at)
       .select("id");
     if (error) fail("Could not save the decision.", error);
     if (!updated || updated.length === 0)
