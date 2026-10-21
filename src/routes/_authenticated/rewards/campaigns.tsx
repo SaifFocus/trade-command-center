@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter, type ErrorComponentProps } from "@tanstack/react-router";
+import { createFileRoute, useRouter, type ErrorComponentProps, type SearchSchemaInput } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -42,7 +42,7 @@ import { campaignSearchSchema, filterCampaigns, type CampaignSearch } from "@/li
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/rewards/campaigns")({
-  validateSearch: (search) => campaignSearchSchema.parse(search),
+  validateSearch: (search: SearchSchemaInput & Partial<CampaignSearch>) => campaignSearchSchema.parse(search),
   loader: ({ context }) => context.queryClient.ensureQueryData(campaignsQueryOptions),
   errorComponent: CampaignLoadError,
   notFoundComponent: () => <p className="p-6 text-muted-foreground">Campaigns unavailable.</p>,
@@ -125,7 +125,7 @@ function CampaignsPage() {
   const now = Date.now();
 
   const rows = useMemo(() => filterCampaigns(campaigns.data, search), [campaigns.data, search]);
-  const draining = campaigns.data.filter(isBudgetLow);
+  const draining = campaigns.data.filter((c) => isBudgetLow(c));
 
   const open = (campaigns.data ?? []).find((c) => c.id === openId) ?? null;
   const total = campaigns.data?.length ?? 0;
