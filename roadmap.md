@@ -10,7 +10,7 @@
 - [ ] /scout page + header link
 
 # Roadmap — Content Rewards
-- [ ] Finish stage-based Clip Pipeline and Approvals with shared spec review, notes and owner decisions; verify both outcomes
+- [x] Clip Pipeline and Approvals: shared spec review, stage cards, owner decisions with notes; approved/denied readback and mobile review verified; temporary data removed
 - [x] Campaigns sorting/filtering, details, budget alerts and owner add/edit/status actions; owner saves verified and temporary data removed
 - [x] Database: cr_* tables, owner-only read, agent write functions, nine agents seeded
 - [x] Sidebar navigation (groups, badges, Ctrl/Cmd+K, mobile drawer) + slim header; trading content preserved
