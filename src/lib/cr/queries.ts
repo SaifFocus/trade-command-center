@@ -54,8 +54,7 @@ export function useCampaigns() {
   return useQuery(campaignsQueryOptions);
 }
 
-export function useClips() {
-  return useQuery({
+export const clipsQueryOptions = queryOptions({
     queryKey: ["cr", "clips"],
     refetchInterval: REFRESH,
     queryFn: () =>
@@ -67,6 +66,9 @@ export function useClips() {
           .limit(1000),
       ),
   });
+
+export function useClips() {
+  return useQuery(clipsQueryOptions);
 }
 
 export function usePosts() {
@@ -86,13 +88,14 @@ export function usePosts() {
   });
 }
 
-export function useAccounts() {
-  return useQuery({
+export const accountsQueryOptions = queryOptions({
     queryKey: ["cr", "accounts"],
     refetchInterval: REFRESH,
     queryFn: () =>
       must<Account[]>(supabase.from("cr_accounts").select("*").order("platform").order("handle")),
   });
+export function useAccounts() {
+  return useQuery(accountsQueryOptions);
 }
 
 export function useAgents() {
