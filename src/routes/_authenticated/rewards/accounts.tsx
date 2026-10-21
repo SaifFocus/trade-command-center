@@ -1,4 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter, type ErrorComponentProps } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { Button as IconButton } from "@/components/ui/button";
+import { accountInput } from "@/lib/cr/management-input";
+import { ZodError } from "zod";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, ExternalLink, Link2, Pencil, Plus, ShieldAlert, Users } from "lucide-react";
@@ -14,7 +18,7 @@ import {
   Chip,
   EmptyState,
   Kpi,
-  LoadState,
+
   PageShell,
   Panel,
   ago,
@@ -24,10 +28,12 @@ import {
 } from "@/components/rewards/kit";
 import { saveAccountFn } from "@/lib/cr/cr.functions";
 import { ACCOUNT_STATUSES, PLATFORMS, PLATFORM_LABEL, profileUrl } from "@/lib/cr/logic";
-import { useAccounts, usePosts, useRefreshCr, type Account } from "@/lib/cr/queries";
+import { accountsQueryOptions, postsQueryOptions, useRefreshCr, type Account } from "@/lib/cr/queries";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/rewards/accounts")({
+  loader: ({ context }) => Promise.all([context.queryClient.ensureQueryData(accountsQueryOptions), context.queryClient.ensureQueryData(postsQueryOptions)]),
+  errorComponent: ManagementError,
   head: () => ({
     meta: [
       { title: "APEX — Accounts" },
@@ -48,20 +54,14 @@ const STATUS_TONE: Record<string, "neon" | "gold" | "danger" | "muted"> = {
   banned: "danger",
 };
 
-const RULES = [
-  "Link every account in Content Rewards before its first post, or its views won't count.",
-  "Instagram accounts must be Professional or Creator accounts to link.",
-  "Warm up new accounts with normal use before posting clips.",
-  "One variant per account: never the same file on two accounts.",
-  "Space posts 30–90 minutes apart on each account.",
-  "Submit each post link within 30 minutes of posting.",
-  "Paid-partnership / disclosure toggle on for every clip.",
-  "Never buy views, join engagement pods or run giveaways for views.",
-];
+function ManagementError({ error }: ErrorComponentProps) {
+  const router = useRouter();
+  return <div className="space-y-3 p-6"><p role="alert" className="text-destructive">{errText(error)}</p><Button onClick={() => { void router.invalidate(); }}>RETRY</Button></div>;
+}
 
 function AccountsPage() {
-  const accounts = useAccounts();
-  const posts = usePosts();
+  const accounts = useSuspenseQuery(accountsQueryOptions);
+  const posts = useSuspenseQuery(postsQueryOptions);
   const refresh = useRefreshCr();
   const [form, setForm] = useState<{ open: boolean; account: Account | null }>({
     open: false,
@@ -101,14 +101,14 @@ function AccountsPage() {
   return (
     <PageShell
       title="ACCOUNTS"
-      subtitle="The social accounts that post clips. Keeping them clean protects every pending payout."
+
       actions={
         <Button tone="gold" onClick={() => openForm(null)}>
           <Plus className="size-3.5" /> ADD ACCOUNT
         </Button>
       }
     >
-      <LoadState loading={accounts.isLoading} error={accounts.error} />
+
 
       {counts.trouble.length > 0 && (
         <div className="flex items-start gap-3 rounded-lg border border-destructive/60 bg-[color-mix(in_oklab,var(--destructive)_8%,transparent)] px-4 py-3 text-xs">
@@ -137,7 +137,7 @@ function AccountsPage() {
           <Kpi label="ACTIVE" value={counts.active} sub="ready to post" tone="neon" />
           <Kpi label="WARMING UP" value={counts.warming} sub="not posting clips yet" tone="gold" />
           <Kpi
-            label="LINKED IN CR"
+            label="LINKED IN WHOP"
             value={`${counts.linked}/${list.length}`}
             sub={counts.linked < list.length ? "unlinked accounts don't earn" : "all linked"}
             tone={counts.linked < list.length ? "danger" : "neon"}
@@ -145,13 +145,13 @@ function AccountsPage() {
         </section>
       )}
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <div className="space-y-4 xl:col-span-2">
+      <div className="grid grid-cols-1 gap-4">
+        <div className="space-y-4">
           {!accounts.isLoading && list.length === 0 ? (
             <EmptyState
               icon={Users}
               title="NO ACCOUNTS YET"
-              body="Link your TikTok, Instagram and YouTube accounts in Content Rewards first, then add them here so the Publisher knows where each clip may go."
+              body="Add your social account handles and record whether each one is linked in Whop."
               action={
                 <Button tone="gold" onClick={() => openForm(null)}>
                   <Plus className="size-3.5" /> ADD ACCOUNT
@@ -246,14 +246,14 @@ function AccountsPage() {
                               {ago(u?.last)}
                             </td>
                             <td className="py-2 text-right">
-                              <button
-                                type="button"
+                              <IconButton
+                                variant="ghost" size="icon"
                                 onClick={() => openForm(a)}
                                 aria-label={`Edit @${a.handle}`}
                                 className="grid size-7 place-items-center rounded border border-border text-muted-foreground hover:border-[var(--neon)] hover:text-neon"
                               >
                                 <Pencil className="size-3" />
-                              </button>
+                              </IconButton>
                             </td>
                           </tr>
                         );
@@ -266,20 +266,7 @@ function AccountsPage() {
           )}
         </div>
 
-        <Panel title="POSTING RULES">
-          <ul className="space-y-2">
-            {RULES.map((r) => (
-              <li key={r} className="flex gap-2 text-xs leading-relaxed text-muted-foreground">
-                <span className="mt-1.5 size-1 shrink-0 rounded-full bg-[var(--neon)]" />
-                {r}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-3 border-t border-border/50 pt-3 text-[11px] leading-relaxed text-muted-foreground">
-            A Content Rewards ban can blacklist the linked accounts and forfeit every pending
-            payout, so a flagged account stops all posting until you clear it.
-          </p>
-        </Panel>
+
       </div>
 
       {form.open && (
@@ -301,7 +288,7 @@ function AccountForm({
 }: {
   account: Account | null;
   onOpenChange: (o: boolean) => void;
-  onSaved: () => void;
+  onSaved: () => void | Promise<void>;
 }) {
   const save = useServerFn(saveAccountFn);
   const [platform, setPlatform] = useState(account?.platform ?? "tiktok");
@@ -322,36 +309,37 @@ function AccountForm({
     setBusy(true);
     try {
       await save({
-        data: {
+        data: accountInput.parse({
           id: account?.id,
           platform: platform as (typeof PLATFORMS)[number],
           handle: h,
           status: status as (typeof ACCOUNT_STATUSES)[number],
           linked_in_whop: linked,
           notes: notes.trim() || null,
-        },
+        }),
       });
-      onSaved();
+      await onSaved();
       onOpenChange(false);
     } catch (e) {
-      setError(errText(e));
+      setError(e instanceof ZodError ? e.issues.map((i) => i.message).join(" ") : errText(e));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Dialog open onOpenChange={onOpenChange}>
-      <DialogContent className="panel max-w-md font-mono">
+    <Dialog open onOpenChange={(open) => { if (!busy) onOpenChange(open); }}>
+      <DialogContent className="panel max-w-md max-h-[90vh] overflow-y-auto font-mono">
         <DialogHeader>
           <DialogTitle className="text-neon font-display tracking-[0.2em]">
             {account ? "EDIT ACCOUNT" : "ADD ACCOUNT"}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Add accounts after linking them in Content Rewards. New accounts start as warming up.
+            Records your account only; it does not connect or verify access to Whop.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-3">
+        <form onSubmit={(e) => { e.preventDefault(); void submit(); }} className="space-y-4">
+        <fieldset disabled={busy} className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1">
             <span className="text-[10px] tracking-[0.25em] text-muted-foreground">PLATFORM</span>
             <select
@@ -393,7 +381,7 @@ function AccountForm({
               onChange={(e) => setLinked(e.target.checked)}
               className="accent-[var(--neon)]"
             />
-            Linked in Content Rewards
+            Linked in Whop
           </label>
           <label className="col-span-2 flex flex-col gap-1">
             <span className="text-[10px] tracking-[0.25em] text-muted-foreground">NOTES</span>
@@ -404,16 +392,17 @@ function AccountForm({
               placeholder="Niche, warm-up start date, anything the Publisher should know"
             />
           </label>
-        </div>
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        </fieldset>
+        {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
         <div className="flex justify-end gap-2">
-          <Button tone="muted" onClick={() => onOpenChange(false)}>
+          <Button tone="muted" disabled={busy} onClick={() => onOpenChange(false)}>
             CANCEL
           </Button>
-          <Button tone="gold" onClick={submit} disabled={busy}>
+          <Button tone="gold" type="submit" disabled={busy}>
             {busy ? "SAVING…" : account ? "SAVE CHANGES" : "ADD ACCOUNT"}
           </Button>
         </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

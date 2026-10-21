@@ -1,4 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter, type ErrorComponentProps } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Fragment, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Bot, ChevronRight, ShieldCheck, Store } from "lucide-react";
@@ -17,7 +19,7 @@ import {
   Chip,
   EmptyState,
   Kpi,
-  LoadState,
+  Button,
   PageShell,
   Panel,
   StatusDot,
@@ -29,10 +31,12 @@ import {
 } from "@/components/rewards/kit";
 import { updateAgentFn } from "@/lib/cr/cr.functions";
 import { AUTONOMY, PUBLIC_FACING_AGENTS, type Autonomy } from "@/lib/cr/logic";
-import { useAgentRuns, useAgents, useRefreshCr, type Agent } from "@/lib/cr/queries";
+import { agentsQueryOptions, agentRunsQueryOptions, useRefreshCr, type Agent } from "@/lib/cr/queries";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/rewards/agents")({
+  loader: ({ context }) => Promise.all([context.queryClient.ensureQueryData(agentsQueryOptions), context.queryClient.ensureQueryData(agentRunsQueryOptions(100))]),
+  errorComponent: ManagementError,
   head: () => ({
     meta: [
       { title: "APEX — Agents" },
@@ -61,9 +65,14 @@ const GATE_AFTER: Record<
   submitter: { label: "Brand approves", icon: Store, tone: "cyan" },
 };
 
+function ManagementError({ error }: ErrorComponentProps) {
+  const router = useRouter();
+  return <div className="space-y-3 p-6"><p role="alert" className="text-destructive">{errText(error)}</p><Button onClick={() => { void router.invalidate(); }}>RETRY</Button></div>;
+}
+
 function AgentsPage() {
-  const agents = useAgents();
-  const runs = useAgentRuns(100);
+  const agents = useSuspenseQuery(agentsQueryOptions);
+  const runs = useSuspenseQuery(agentRunsQueryOptions(100));
   const refresh = useRefreshCr();
   const update = useServerFn(updateAgentFn);
   const [filter, setFilter] = useState("all");
@@ -96,6 +105,7 @@ function AgentsPage() {
       setConfirm(agent);
       return;
     }
+    if (busyKey) return;
     setBusyKey(agent.key);
     setError("");
     try {
@@ -113,11 +123,11 @@ function AgentsPage() {
   return (
     <PageShell
       title="AGENTS"
-      subtitle="Nine agents hand clips down one pipeline. Two checkpoints stay human: your approval and the brand's."
+
     >
-      <LoadState loading={agents.isLoading} error={agents.error} />
+
       {error && (
-        <div className="rounded-lg border border-destructive/50 px-4 py-3 text-xs text-destructive">
+        <div role="alert" className="rounded-lg border border-destructive/50 px-4 py-3 text-xs text-destructive">
           {error}
         </div>
       )}
@@ -222,7 +232,8 @@ function AgentsPage() {
                 key={a.key}
                 n={i + 1}
                 agent={a}
-                busy={busyKey === a.key}
+                busy={busyKey !== null}
+                summary={runs.data.find((r) => r.agent_key === a.key)?.summary ?? null}
                 now={now}
                 onChange={(p) => change(a, p)}
               />
@@ -235,7 +246,7 @@ function AgentsPage() {
         <EmptyState
           icon={Bot}
           title="NO AGENTS CONFIGURED"
-          body="The nine Content Rewards agents are seeded by the database migration. If this stays empty, the migration has not run yet."
+          body="Your configured Content Rewards agents appear here once the team is set up."
         />
       )}
 
@@ -262,11 +273,12 @@ function AgentsPage() {
         {shownRuns.length === 0 ? (
           <p className="text-xs text-muted-foreground">
             {filter === "all"
-              ? "No runs logged yet. Every agent run is written here through cr_log_agent_run."
+              ? "No runs logged yet. Connected agents add their results here after each run."
               : `${nameOf(filter)} has not logged a run yet.`}
           </p>
         ) : (
           <div className="overflow-x-auto">
+            <p className="mb-3 text-[10px] text-muted-foreground">Latest {runs.data.length} runs</p>
             <table className="w-full text-xs">
               <thead className="text-left text-[10px] tracking-widest text-muted-foreground">
                 <tr>
@@ -319,8 +331,7 @@ function AgentsPage() {
                   : "Live post links will be submitted to Content Rewards without asking you first."}
               </span>
               <span className="block">
-                The plan keeps this manual until you have had 4 clean weeks: no rejections for rule
-                breaks and no account warnings. You can switch it back here at any time.
+                Only owner-approved clips may be posted. This saves the agent’s configuration; execution is handled by your connected agent team.
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -363,12 +374,14 @@ function AutonomyDot({ autonomy }: { autonomy: string }) {
 
 function AgentCard({
   n,
+  summary,
   agent: a,
   busy,
   now,
   onChange,
 }: {
   n: number;
+  summary: string | null;
   agent: Agent;
   busy: boolean;
   now: number;
@@ -401,38 +414,9 @@ function AgentCard({
         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{a.description}</p>
       )}
 
-      <div
-        className="mt-3 grid grid-cols-3 rounded border border-border bg-terminal p-0.5"
-        role="radiogroup"
-        aria-label={`${a.name} autonomy`}
-      >
-        {AUTONOMY.map((level) => {
-          const on = a.autonomy === level;
-          return (
-            <button
-              key={level}
-              type="button"
-              role="radio"
-              aria-checked={on}
-              disabled={busy || on}
-              onClick={() => onChange({ autonomy: level })}
-              title={AUTONOMY_HINT[level]}
-              className={cn(
-                "rounded px-2 py-1 text-[10px] tracking-[0.2em] transition-colors disabled:cursor-default",
-                on
-                  ? level === "auto"
-                    ? "bg-[color-mix(in_oklab,var(--neon)_15%,transparent)] text-neon"
-                    : level === "assisted"
-                      ? "bg-[color-mix(in_oklab,var(--gold)_15%,transparent)] text-gold"
-                      : "bg-sidebar-accent text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {level.toUpperCase()}
-            </button>
-          );
-        })}
-      </div>
+      <ToggleGroup type="single" value={a.autonomy} disabled={busy} onValueChange={(value) => { if (AUTONOMY.some((x) => x === value)) onChange({ autonomy: value as Autonomy }); }} aria-label={`${a.name} autonomy`} className="mt-3 grid grid-cols-3 border border-border rounded p-0.5">
+        {AUTONOMY.map((level) => <ToggleGroupItem key={level} value={level} title={AUTONOMY_HINT[level]} className="min-w-0 px-1 text-[10px] data-[state=on]:text-neon">{level.toUpperCase()}</ToggleGroupItem>)}
+      </ToggleGroup>
 
       <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
         <dt className="text-muted-foreground">Last run</dt>
@@ -451,6 +435,7 @@ function AgentCard({
           {a.schedule_text || (a.autonomy === "manual" ? "On demand" : "After the previous stage")}
         </dd>
       </dl>
+      <p className="mt-3 border-t border-border pt-3 text-xs break-words text-muted-foreground">{summary || "No run summary yet"}</p>
     </article>
   );
 }
