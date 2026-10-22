@@ -174,7 +174,7 @@ export function summarizeRun(key: string, r: Any): RunNote {
       return {
         status: failed > 0 && done === 0 ? "warning" : "ok",
         items: done,
-        summary: `Graded ${plural(done, "wallet")}${failed ? ` · ${failed} failed` : ""} · ${n(r.queue)} waiting · watchlist ${n(r.watchlist)}`,
+        summary: `Graded ${plural(done, "wallet")}${failed ? ` · ${failed} failed` : ""} · ${n(r.queue)} waiting · ${n(r.watchlist)} pass the full bar`,
       };
     }
     case "wallet_tracker": {
