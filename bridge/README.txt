@@ -15,12 +15,15 @@ First time
 Everyday
   Nothing to do. The computer must be on and awake for Invo follows to work (on-chain follows run in the cloud anyway).
   bridge.log in this folder shows each round.
+  When the computer wakes from sleep, or a round stops making progress (a frozen browser), the bridge restarts itself.
+  Every 10 minutes Windows also checks that it is running and starts it if not (Task Scheduler: "APEX Invo Bridge").
 
 If APEX says "logged out of Invo"
   Double-click login.cmd, log in again, close the window.
 
 Stop it
-  stop.cmd stops it until next login. uninstall-autostart.cmd stops it for good.
+  stop.cmd stops it until you start it again or next log in to Windows (the 10-minute check leaves it stopped).
+  uninstall-autostart.cmd stops it for good and removes the login start and the 10-minute check.
 
 Files
   secret.txt       this computer's key for APEX. Keep it private. APEX only stores its fingerprint.

@@ -6,3 +6,5 @@ secret-hash.txt
 bridge.pid
 stop.flag
 package-lock.json
+heartbeat.txt
+paused.flag

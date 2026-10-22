@@ -8,7 +8,11 @@
 //   node bridge.mjs --login    open a visible browser to log in to Invo (stops a running bridge first)
 //   node bridge.mjs            run the bridge (normally started hidden by start-hidden.vbs)
 //   node bridge.mjs --once     one round, then exit (testing)
-//   node bridge.mjs --stop     stop a running bridge
+//   node bridge.mjs --stop     stop a running bridge (the 10-minute check leaves it stopped until the next start)
+//   node bridge.mjs --ensure   start the bridge unless a healthy one is running (Windows runs this every 10 minutes)
+//
+// Staying alive: a watchdog restarts the bridge when the computer wakes from sleep or when a round stops making
+// progress (a frozen browser), and the 10-minute check replaces a bridge whose heartbeat has stopped.
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -16,7 +20,7 @@ import crypto from "node:crypto";
 import zlib from "node:zlib";
 import { fileURLToPath } from "node:url";
 
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const F = (n) => path.join(DIR, n);
 const cfg = { apexUrl: "https://apextradyr.lovable.app", browser: "msedge", headless: true, ...readJson(F("config.json")) };
@@ -49,6 +53,28 @@ async function stopRunning() {
 }
 const stopRequested = () => fs.existsSync(F("stop.flag"));
 
+// Watchdog timing (environment overrides are for testing only).
+const TICK_MS = Number(process.env.APEX_BRIDGE_TICK_MS) || 30_000;
+/** A tick that arrives this late means the computer was asleep: restart with a fresh browser. */
+const WAKE_GAP_MS = Number(process.env.APEX_BRIDGE_WAKE_GAP_MS) || 2 * 60_000;
+/** No finished visit, post or wait for this long means something is frozen: restart. */
+const STALL_MS = Number(process.env.APEX_BRIDGE_STALL_MS) || 10 * 60_000;
+/** The 10-minute check replaces a running bridge whose heartbeat is older than this. */
+const FROZEN_MS = Number(process.env.APEX_BRIDGE_FROZEN_MS) || 15 * 60_000;
+
+/** Ends browser processes left on this bridge's own profile by a frozen or killed bridge; they would block a new
+ * launch. Only processes whose command line names this folder's profile are touched (Windows only). */
+async function killStrayBrowsers() {
+  if (process.platform !== "win32") return;
+  const { execFileSync } = await import("node:child_process");
+  const dir = F("profile").replace(/'/g, "''");
+  const ps = `Get-CimInstance Win32_Process -Filter "Name='msedge.exe' OR Name='chrome.exe'" | Where-Object { $_.CommandLine -and $_.CommandLine.Contains('${dir}') } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue; $_.ProcessId }`;
+  try {
+    const out = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", ps], { windowsHide: true, timeout: 30_000 }).toString().trim();
+    if (out) log(`closed ${out.split(/\s+/).length} leftover browser process(es)`);
+  } catch (e) { log(`could not check for leftover browsers: ${String(e?.message ?? e).split("\n")[0]}`); }
+}
+
 async function launch(headless) {
   const { chromium } = await import("playwright-core");
   const channels = [cfg.browser, "msedge", "chrome"].filter((c, i, a) => c && a.indexOf(c) === i);
@@ -75,15 +101,35 @@ if (args.has("--init")) {
   console.log("APEX only needs its fingerprint, saved in secret-hash.txt:\n  " + hash + "\n");
   process.exit(0);
 }
-if (args.has("--stop")) { const ok = await stopRunning(); console.log(ok ? "Bridge stopped." : "Bridge was not running."); process.exit(0); }
+if (args.has("--stop")) {
+  // paused.flag keeps the 10-minute check from starting it again; any normal start clears it.
+  fs.writeFileSync(F("paused.flag"), String(Date.now()));
+  const ok = await stopRunning();
+  console.log(ok ? "Bridge stopped." : "Bridge was not running.");
+  process.exit(0);
+}
+if (args.has("--ensure")) {
+  if (fs.existsSync(F("paused.flag"))) process.exit(0); // stopped on purpose with stop.cmd
+  const pid = runningPid();
+  if (pid) {
+    const hb = Number(readText(F("heartbeat.txt")));
+    if (hb && Date.now() - hb < FROZEN_MS) process.exit(0); // healthy: nothing to do, nothing logged
+    log(`bridge ${pid} looks frozen (last progress ${hb ? `${Math.round((Date.now() - hb) / 60_000)} min ago` : "unknown"}), replacing it`);
+    try { process.kill(pid, "SIGKILL"); } catch { /* already gone */ }
+    await sleep(3000);
+  }
+}
 if (args.has("--login")) {
+  fs.writeFileSync(F("paused.flag"), String(Date.now())); // keeps the 10-minute check away from the login window
   await stopRunning();
+  await killStrayBrowsers();
   const ctx = await launch(false);
   const page = ctx.pages()[0] ?? (await ctx.newPage());
   await page.goto("https://app.invoapp.com/", { waitUntil: "domcontentloaded" }).catch(() => {});
   console.log("\nLog in to Invo in the browser window that just opened.");
   console.log("When you can see the Invo app, close that browser window.\n");
   await new Promise((r) => ctx.on("close", r));
+  try { fs.unlinkSync(F("paused.flag")); } catch { /* ignore */ }
   console.log("Login saved.");
   process.exit(0);
 }
@@ -91,11 +137,49 @@ if (args.has("--login")) {
 // ---------------------------------------------------------------- run
 const secret = readText(F("secret.txt"));
 if (!secret) { log("no secret.txt: run setup.cmd first"); process.exit(1); }
+// A bridge started by a restart waits for the old one to exit (it closes its browser first).
+const after = Number(process.env.APEX_BRIDGE_AFTER);
+if (after) for (let i = 0; i < 240 && alive(after); i++) await sleep(250);
 if (runningPid()) { log(`bridge already running (pid ${runningPid()}), exiting`); process.exit(0); }
+if (!args.has("--ensure")) try { fs.unlinkSync(F("paused.flag")); } catch { /* not paused */ }
 try { fs.unlinkSync(F("stop.flag")); } catch { /* no stale flag */ }
 fs.writeFileSync(F("bridge.pid"), String(process.pid));
 process.on("exit", () => { if (readText(F("bridge.pid")) === String(process.pid)) try { fs.unlinkSync(F("bridge.pid")); } catch { /* ignore */ } });
 for (const s of ["SIGINT", "SIGTERM"]) process.on(s, () => process.exit(0));
+// Two copies started at the same moment: the last one to write bridge.pid keeps running.
+await sleep(1500);
+if (readText(F("bridge.pid")) !== String(process.pid)) { log("another bridge started at the same time, exiting"); process.exit(0); }
+
+let progress = Date.now();
+const beat = () => { progress = Date.now(); };
+const writeHeartbeat = () => { try { fs.writeFileSync(F("heartbeat.txt"), String(progress)); } catch { /* ignore */ } };
+writeHeartbeat();
+let lastTick = Date.now();
+setInterval(() => {
+  const now = Date.now(), gap = now - lastTick;
+  lastTick = now;
+  writeHeartbeat();
+  if (gap > WAKE_GAP_MS) void restart(`the computer was asleep or paused for ${Math.round(gap / 60_000)} min`);
+  else if (now - progress > STALL_MS) void restart(`no progress for ${Math.round((now - progress) / 60_000)} min (frozen browser?)`);
+}, TICK_MS);
+
+let restarting = false;
+/** Starts a fresh bridge (it waits for this one to exit), closes the browser without waiting on a frozen one, exits. */
+async function restart(reason) {
+  if (restarting) return;
+  restarting = true;
+  log(`restarting: ${reason}`);
+  try {
+    const { spawn } = await import("node:child_process");
+    const out = fs.openSync(F("bridge-console.log"), "a");
+    spawn(process.execPath, [fileURLToPath(import.meta.url)], {
+      cwd: DIR, detached: true, windowsHide: true, stdio: ["ignore", out, out],
+      env: { ...process.env, APEX_BRIDGE_AFTER: String(process.pid) },
+    }).unref();
+  } catch (e) { log(`could not start a new bridge (${String(e?.message ?? e)}); the 10-minute check will start one`); }
+  await Promise.race([ctx?.close().catch(() => {}), sleep(10_000)]);
+  process.exit(0); // Playwright kills a browser that did not close
+}
 
 async function apex(pathname, init = {}) {
   const res = await fetch(cfg.apexUrl + pathname, {
@@ -163,6 +247,8 @@ let ctx = null, page = null;
 async function ensureBrowser() {
   if (ctx && page && !page.isClosed()) return;
   try { await ctx?.close(); } catch { /* ignore */ }
+  ctx = null;
+  await killStrayBrowsers();
   ctx = await launch(cfg.headless !== false);
   page = ctx.pages()[0] ?? (await ctx.newPage());
   log(`browser started (${cfg.browser}, headless=${cfg.headless !== false})`);
@@ -178,11 +264,12 @@ for (;;) {
     if (conf.targets?.length) {
       await ensureBrowser();
       const results = [];
-      for (const t of conf.targets) { if (stopRequested()) break; results.push(await visit(page, t, conf)); }
+      for (const t of conf.targets) { if (stopRequested()) break; results.push(await visit(page, t, conf)); beat(); }
       if (stopRequested()) await shutdown();
       const loggedOut = results.length > 0 && results.filter((r) => r.logged_out).length >= Math.ceil(results.length / 2);
       const body = zlib.gzipSync(Buffer.from(JSON.stringify({ version: VERSION, at: new Date().toISOString(), host: os.hostname(), logged_out: loggedOut, results })));
       const r = await apex("/api/invo/ingest", { method: "POST", headers: { "content-type": "application/json", "x-body-encoding": "gzip" }, body });
+      beat();
       log(`round: ${conf.targets.length} portfolios, ${r.parsed} read, ${r.positions} open positions${r.events?.length ? ", " + r.events.join(", ") : ""}${r.problems?.length ? `, ${r.problems.length} problems` : ""}${loggedOut ? ", LOGGED OUT (run login.cmd)" : ""}`);
       if (loggedOut) wait = Math.max(wait, 600);
     } else log("no Invo portfolios to follow right now");
@@ -193,7 +280,8 @@ for (;;) {
   }
   if (args.has("--once")) await shutdown();
   const until = Date.now() + Math.max(15_000, wait * 1000 - (Date.now() - t0));
-  while (Date.now() < until) { if (stopRequested()) await shutdown(); await sleep(1000); }
+  while (Date.now() < until && !restarting) { if (stopRequested()) await shutdown(); beat(); await sleep(1000); }
+  while (restarting) await sleep(1000); // restart() exits the process
 }
 
 async function shutdown() {
