@@ -126,7 +126,7 @@ function AgentsPage() {
         const h = agentHealth(a, now);
         const scheduleText =
           a.kind === "pc"
-            ? "About every 3 min while your PC is on"
+            ? "Every 3 min (PC on)"
             : a.schedule
               ? describeSchedule(a.schedule, now)
               : "—";
@@ -376,7 +376,7 @@ function attention(r: Row, now: number) {
     return `no round since ${when(r.last_run_at)} (${ago(r.last_run_at, now)}), so Invo follows are paused. It needs your PC on and awake; if it is, double-click start.cmd in Documents\\APEX Invo Bridge.`;
   }
   if (r.health === "overdue")
-    return `no run logged since ${ago(r.last_run_at, now)}, although it is scheduled ${r.scheduleText.toLowerCase()}.`;
+    return `last run ${ago(r.last_run_at, now)}, but it is scheduled ${r.scheduleText.toLowerCase()}, so at least one run is missing.`;
   return `last run failed: ${r.last_summary ?? "no details"}`;
 }
 
