@@ -9,11 +9,14 @@ export function PageShell({
   title,
   subtitle,
   actions,
+  eyebrow = "CONTENT REWARDS",
   children,
 }: {
   title: string;
   subtitle?: string;
   actions?: ReactNode;
+  /** Section name above the title. */
+  eyebrow?: string;
   children: ReactNode;
 }) {
   return (
@@ -22,7 +25,7 @@ export function PageShell({
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3 px-6 py-4">
           <div className="min-w-0">
             <div className="text-[10px] tracking-[0.4em] text-muted-foreground">
-              CONTENT REWARDS
+              {eyebrow}
             </div>
             <h1 className="text-neon font-display text-2xl font-black tracking-[0.2em]">{title}</h1>
             {subtitle && <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>}

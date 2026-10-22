@@ -529,6 +529,89 @@ export type Database = {
           },
         ]
       }
+      desk_agent_runs: {
+        Row: {
+          agent_key: string
+          finished_at: string | null
+          id: number
+          items: number
+          started_at: string
+          status: string
+          summary: string | null
+        }
+        Insert: {
+          agent_key: string
+          finished_at?: string | null
+          id?: number
+          items?: number
+          started_at?: string
+          status?: string
+          summary?: string | null
+        }
+        Update: {
+          agent_key?: string
+          finished_at?: string | null
+          id?: number
+          items?: number
+          started_at?: string
+          status?: string
+          summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "desk_agent_runs_agent_key_fkey"
+            columns: ["agent_key"]
+            isOneToOne: false
+            referencedRelation: "desk_agents"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      desk_agents: {
+        Row: {
+          cron_job: string | null
+          description: string | null
+          key: string
+          kind: string
+          last_run_at: string | null
+          last_status: string | null
+          last_summary: string | null
+          name: string
+          role: string | null
+          schedule: string | null
+          section: string
+          sort: number
+        }
+        Insert: {
+          cron_job?: string | null
+          description?: string | null
+          key: string
+          kind: string
+          last_run_at?: string | null
+          last_status?: string | null
+          last_summary?: string | null
+          name: string
+          role?: string | null
+          schedule?: string | null
+          section: string
+          sort?: number
+        }
+        Update: {
+          cron_job?: string | null
+          description?: string | null
+          key?: string
+          kind?: string
+          last_run_at?: string | null
+          last_status?: string | null
+          last_summary?: string | null
+          name?: string
+          role?: string | null
+          schedule?: string | null
+          section?: string
+          sort?: number
+        }
+        Relationships: []
+      }
       desk_config: {
         Row: {
           budget_sek: number
@@ -2086,6 +2169,36 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      desk_agent_status: {
+        Args: never
+        Returns: {
+          description: string
+          items_24h: number
+          key: string
+          kind: string
+          last_run_at: string
+          last_status: string
+          last_summary: string
+          name: string
+          problems_24h: number
+          role: string
+          runs_24h: number
+          schedule: string
+          schedule_active: boolean
+          section: string
+          sort: number
+        }[]
+      }
+      desk_log_agent_run: {
+        Args: {
+          p_agent_key: string
+          p_items: number
+          p_started_at?: string
+          p_status: string
+          p_summary: string
+        }
+        Returns: undefined
       }
       hl_backtest_data: { Args: { p_coin: string }; Returns: Json }
       hl_latest_t: { Args: { p_coin: string }; Returns: Json }

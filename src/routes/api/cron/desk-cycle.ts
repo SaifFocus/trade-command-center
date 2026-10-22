@@ -8,9 +8,10 @@ export const Route = createFileRoute("/api/cron/desk-cycle")({
         const { verifyCron } = await import("@/lib/hl/cron-auth.server");
         const db = await verifyCron(request);
         if (!db) return Response.json({ error: "Unauthorized" }, { status: 401 });
+        const { recordRun } = await import("@/lib/agents/runs.server");
         const { runCycle } = await import("@/lib/hl/desk.server");
         try {
-          return Response.json(await runCycle(db));
+          return Response.json(await recordRun(db, "signal_scanner", () => runCycle(db)));
         } catch (e) {
           return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
         }

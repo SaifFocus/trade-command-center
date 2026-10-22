@@ -8,9 +8,10 @@ export const Route = createFileRoute("/api/cron/sm-track")({
         const { verifyCron } = await import("@/lib/hl/cron-auth.server");
         const db = await verifyCron(request);
         if (!db) return Response.json({ error: "Unauthorized" }, { status: 401 });
+        const { recordRun } = await import("@/lib/agents/runs.server");
         const { trackWatchlist } = await import("@/lib/sm/track.server");
         try {
-          return Response.json(await trackWatchlist(db));
+          return Response.json(await recordRun(db, "wallet_tracker", () => trackWatchlist(db)));
         } catch (e) {
           return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
         }

@@ -31,6 +31,7 @@ export type RouteNavItem = NavItemBase & {
     | "/desk"
     | "/backtest"
     | "/scout"
+    | "/agents"
     | "/rewards"
     | "/rewards/campaigns"
     | "/rewards/pipeline"
@@ -67,6 +68,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: "/desk", label: "Desk", icon: Crosshair, keywords: "paper live signals positions" },
       { to: "/backtest", label: "Backtest", icon: FlaskConical, keywords: "history runs" },
       { to: "/scout", label: "Scout", icon: Radar, keywords: "smart money wallets invo copy" },
+      { to: "/agents", label: "Agents", icon: Bot, keywords: "trading agents jobs schedule runs log status bridge" },
       {
         // The owner's private Claude dashboard (claude.ai login required); opens in a new tab.
         href: "https://claude.ai/artifact/1MPnjdb7L8FfowkzfspCrR",
