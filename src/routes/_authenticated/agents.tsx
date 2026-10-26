@@ -50,6 +50,7 @@ export const Route = createFileRoute("/_authenticated/agents")({
 const SECTIONS: { key: string; title: string }[] = [
   { key: "desk", title: "TRADING DESK" },
   { key: "scout", title: "SCOUT & COPY TRADING" },
+  { key: "fx", title: "FX DESK" },
   { key: "reports", title: "REPORTS" },
 ];
 

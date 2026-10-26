@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  classify, stats, sameHourClusters, groupTrades, traderLabel,
-  type GridTrade, type Unit, type Outcome, type GroupKey, type Stats,
+  stats, sameHourClusters, groupTrades, traderLabel,
+  type GridTrade, type Unit, type GroupKey, type Stats,
 } from "@/lib/desk/trade-grid";
 import { Dots } from "@/components/desk/TradeDots";
 

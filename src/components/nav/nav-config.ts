@@ -1,4 +1,5 @@
 import {
+  Banknote,
   Bot,
   Clapperboard,
   Crosshair,
@@ -29,6 +30,7 @@ export type RouteNavItem = NavItemBase & {
   to:
     | "/"
     | "/desk"
+    | "/fx"
     | "/backtest"
     | "/scout"
     | "/agents"
@@ -66,6 +68,7 @@ export const NAV_GROUPS: NavGroup[] = [
         keywords: "home portfolio markets",
       },
       { to: "/desk", label: "Desk", icon: Crosshair, keywords: "paper live signals positions" },
+      { to: "/fx", label: "FX Desk", icon: Banknote, keywords: "forex fx eur jpy gbp gold silver sprint steady paper" },
       { to: "/backtest", label: "Backtest", icon: FlaskConical, keywords: "history runs" },
       { to: "/scout", label: "Scout", icon: Radar, keywords: "smart money wallets invo copy" },
       { to: "/agents", label: "Agents", icon: Bot, keywords: "trading agents jobs schedule runs log status bridge" },
