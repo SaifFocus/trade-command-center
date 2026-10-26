@@ -99,7 +99,9 @@ export async function loadCopyWallets(db: DB): Promise<CopyWallet[]> {
     for (let from = 0; ; from += 1000) {
       const { data: tr, error: e } = await db.from("sm_trades")
         .select("address,coin,side,entry_t,exit_t,entry_px,exit_px,max_notional,net_pnl,fees,hold_h,liquidated")
-        .in("address", chunk).order("id").range(from, from + 999);
+        // Order matches the sm_trades_addr (address, entry_t) index: ordering by id makes Postgres scan the whole
+        // primary key and filter by address, which blows the statement timeout. id stays last so paging is stable.
+        .in("address", chunk).order("address").order("entry_t").order("id").range(from, from + 999);
       if (e) throw new Error(`sm_trades: ${e.message}`);
       for (const t of tr ?? []) {
         const list = trades.get(t.address) ?? trades.set(t.address, []).get(t.address)!;
