@@ -738,6 +738,220 @@ export type Database = {
         }
         Relationships: []
       }
+      fx_books: {
+        Row: {
+          allowed_coins: string[]
+          attempt: number
+          cash_usd: number
+          created_at: string
+          daily_loss_pct: number | null
+          fee_pct: number
+          id: string
+          max_leverage: number
+          max_open: number
+          max_risk_pct: number
+          name: string
+          reset_at: string | null
+          slip_pct: number
+          start_sek: number
+          start_usd: number
+          status: string
+          target_sek: number
+        }
+        Insert: {
+          allowed_coins?: string[]
+          attempt?: number
+          cash_usd: number
+          created_at?: string
+          daily_loss_pct?: number | null
+          fee_pct?: number
+          id: string
+          max_leverage: number
+          max_open: number
+          max_risk_pct: number
+          name: string
+          reset_at?: string | null
+          slip_pct?: number
+          start_sek?: number
+          start_usd: number
+          status?: string
+          target_sek?: number
+        }
+        Update: {
+          allowed_coins?: string[]
+          attempt?: number
+          cash_usd?: number
+          created_at?: string
+          daily_loss_pct?: number | null
+          fee_pct?: number
+          id?: string
+          max_leverage?: number
+          max_open?: number
+          max_risk_pct?: number
+          name?: string
+          reset_at?: string | null
+          slip_pct?: number
+          start_sek?: number
+          start_usd?: number
+          status?: string
+          target_sek?: number
+        }
+        Relationships: []
+      }
+      fx_equity: {
+        Row: {
+          attempt: number
+          book: string
+          equity_usd: number
+          id: number
+          t: string
+        }
+        Insert: {
+          attempt: number
+          book: string
+          equity_usd: number
+          id?: number
+          t?: string
+        }
+        Update: {
+          attempt?: number
+          book?: string
+          equity_usd?: number
+          id?: number
+          t?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fx_equity_book_fkey"
+            columns: ["book"]
+            isOneToOne: false
+            referencedRelation: "fx_books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fx_positions: {
+        Row: {
+          attempt: number
+          book: string
+          closed_at: string | null
+          coin: string
+          entry_px: number
+          exit_px: number | null
+          exit_reason: string | null
+          fees_usd: number
+          funding_usd: number
+          id: string
+          init_stop_px: number
+          last_checked_at: string | null
+          leverage: number
+          liq_px: number
+          margin_usd: number
+          net_r: number | null
+          net_usd: number | null
+          notional_usd: number
+          opened_at: string
+          risk_usd: number
+          side: string
+          signal_ref: string | null
+          size: number
+          status: string
+          stop_px: number
+          target_px: number | null
+          thesis: string | null
+        }
+        Insert: {
+          attempt: number
+          book: string
+          closed_at?: string | null
+          coin: string
+          entry_px: number
+          exit_px?: number | null
+          exit_reason?: string | null
+          fees_usd?: number
+          funding_usd?: number
+          id?: string
+          init_stop_px: number
+          last_checked_at?: string | null
+          leverage: number
+          liq_px: number
+          margin_usd: number
+          net_r?: number | null
+          net_usd?: number | null
+          notional_usd: number
+          opened_at?: string
+          risk_usd: number
+          side: string
+          signal_ref?: string | null
+          size: number
+          status?: string
+          stop_px: number
+          target_px?: number | null
+          thesis?: string | null
+        }
+        Update: {
+          attempt?: number
+          book?: string
+          closed_at?: string | null
+          coin?: string
+          entry_px?: number
+          exit_px?: number | null
+          exit_reason?: string | null
+          fees_usd?: number
+          funding_usd?: number
+          id?: string
+          init_stop_px?: number
+          last_checked_at?: string | null
+          leverage?: number
+          liq_px?: number
+          margin_usd?: number
+          net_r?: number | null
+          net_usd?: number | null
+          notional_usd?: number
+          opened_at?: string
+          risk_usd?: number
+          side?: string
+          signal_ref?: string | null
+          size?: number
+          status?: string
+          stop_px?: number
+          target_px?: number | null
+          thesis?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fx_positions_book_fkey"
+            columns: ["book"]
+            isOneToOne: false
+            referencedRelation: "fx_books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fx_quotes: {
+        Row: {
+          coin: string
+          funding_rate: number | null
+          mark: number | null
+          mid: number
+          updated_at: string
+        }
+        Insert: {
+          coin: string
+          funding_rate?: number | null
+          mark?: number | null
+          mid: number
+          updated_at?: string
+        }
+        Update: {
+          coin?: string
+          funding_rate?: number | null
+          mark?: number | null
+          mid?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hl_candles: {
         Row: {
           c: number | null
@@ -2200,6 +2414,241 @@ export type Database = {
         }
         Returns: undefined
       }
+      fx__atr14: {
+        Args: { p_coin: string; p_interval: string }
+        Returns: number
+      }
+      fx__bars4h: {
+        Args: { p_coin: string }
+        Returns: {
+          c: number
+          h: number
+          l: number
+          o: number
+          t: string
+        }[]
+      }
+      fx__chg: {
+        Args: { p_ago: string; p_coin: string; p_mid: number }
+        Returns: number
+      }
+      fx__close: {
+        Args: { p_id: string; p_px: number; p_reason: string; p_t: string }
+        Returns: {
+          attempt: number
+          book: string
+          closed_at: string | null
+          coin: string
+          entry_px: number
+          exit_px: number | null
+          exit_reason: string | null
+          fees_usd: number
+          funding_usd: number
+          id: string
+          init_stop_px: number
+          last_checked_at: string | null
+          leverage: number
+          liq_px: number
+          margin_usd: number
+          net_r: number | null
+          net_usd: number | null
+          notional_usd: number
+          opened_at: string
+          risk_usd: number
+          side: string
+          signal_ref: string | null
+          size: number
+          status: string
+          stop_px: number
+          target_px: number | null
+          thesis: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "fx_positions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      fx__coin_max_lev: { Args: { p_coin: string }; Returns: number }
+      fx__mmr: { Args: { p_coin: string }; Returns: number }
+      fx__realized_today: {
+        Args: { p_attempt: number; p_book: string }
+        Returns: number
+      }
+      fx__slip: { Args: { p_coin: string; p_slip: number }; Returns: number }
+      fx_amend: {
+        Args: { p_position_id: string; p_stop_px: number; p_target_px: number }
+        Returns: {
+          attempt: number
+          book: string
+          closed_at: string | null
+          coin: string
+          entry_px: number
+          exit_px: number | null
+          exit_reason: string | null
+          fees_usd: number
+          funding_usd: number
+          id: string
+          init_stop_px: number
+          last_checked_at: string | null
+          leverage: number
+          liq_px: number
+          margin_usd: number
+          net_r: number | null
+          net_usd: number | null
+          notional_usd: number
+          opened_at: string
+          risk_usd: number
+          side: string
+          signal_ref: string | null
+          size: number
+          status: string
+          stop_px: number
+          target_px: number | null
+          thesis: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "fx_positions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      fx_book_equity: { Args: { p_book: string }; Returns: number }
+      fx_close: {
+        Args: { p_position_id: string; p_reason?: string }
+        Returns: {
+          attempt: number
+          book: string
+          closed_at: string | null
+          coin: string
+          entry_px: number
+          exit_px: number | null
+          exit_reason: string | null
+          fees_usd: number
+          funding_usd: number
+          id: string
+          init_stop_px: number
+          last_checked_at: string | null
+          leverage: number
+          liq_px: number
+          margin_usd: number
+          net_r: number | null
+          net_usd: number | null
+          notional_usd: number
+          opened_at: string
+          risk_usd: number
+          side: string
+          signal_ref: string | null
+          size: number
+          status: string
+          stop_px: number
+          target_px: number | null
+          thesis: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "fx_positions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      fx_context: { Args: never; Returns: Json }
+      fx_open: {
+        Args: {
+          p_book: string
+          p_coin: string
+          p_leverage: number
+          p_risk_pct: number
+          p_side: string
+          p_signal_ref?: string
+          p_stop_px: number
+          p_target_px: number
+          p_thesis: string
+        }
+        Returns: {
+          attempt: number
+          book: string
+          closed_at: string | null
+          coin: string
+          entry_px: number
+          exit_px: number | null
+          exit_reason: string | null
+          fees_usd: number
+          funding_usd: number
+          id: string
+          init_stop_px: number
+          last_checked_at: string | null
+          leverage: number
+          liq_px: number
+          margin_usd: number
+          net_r: number | null
+          net_usd: number | null
+          notional_usd: number
+          opened_at: string
+          risk_usd: number
+          side: string
+          signal_ref: string | null
+          size: number
+          status: string
+          stop_px: number
+          target_px: number | null
+          thesis: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "fx_positions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      fx_settle: {
+        Args: {
+          p_checked_at: string
+          p_closed_at?: string
+          p_exit_px?: number
+          p_funding_add: number
+          p_position_id: string
+          p_reason?: string
+        }
+        Returns: {
+          attempt: number
+          book: string
+          closed_at: string | null
+          coin: string
+          entry_px: number
+          exit_px: number | null
+          exit_reason: string | null
+          fees_usd: number
+          funding_usd: number
+          id: string
+          init_stop_px: number
+          last_checked_at: string | null
+          leverage: number
+          liq_px: number
+          margin_usd: number
+          net_r: number | null
+          net_usd: number | null
+          notional_usd: number
+          opened_at: string
+          risk_usd: number
+          side: string
+          signal_ref: string | null
+          size: number
+          status: string
+          stop_px: number
+          target_px: number | null
+          thesis: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "fx_positions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      fx_snapshot: { Args: never; Returns: Json }
       hl_backtest_data: { Args: { p_coin: string }; Returns: Json }
       hl_latest_t: { Args: { p_coin: string }; Returns: Json }
       invo_bridge_prune: { Args: never; Returns: undefined }

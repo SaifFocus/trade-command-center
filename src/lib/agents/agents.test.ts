@@ -223,5 +223,9 @@ describe("summarizeRun", () => {
         variants: { tier_a: { all: { trades: 80 }, gate: { pass: false } } },
       }).summary,
     ).toBe("400 signals from 60 wallets · tier A 80 trades, gate fail");
+    expect(summarizeRun("fx_engine", { quotes: 5, checked: 1, closed: ["sprint xyz:EUR stop"], candles: 0 }).summary).toBe(
+      "5 quotes · 1 open position checked · closed sprint xyz:EUR stop",
+    );
+    expect(summarizeRun("fx_engine", { quotes: 3, checked: 0, closed: [] }).status).toBe("warning");
   });
 });

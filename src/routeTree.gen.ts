@@ -15,6 +15,7 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAgentsRouteImport } from './routes/_authenticated/agents'
 import { Route as AuthenticatedBacktestRouteImport } from './routes/_authenticated/backtest'
 import { Route as AuthenticatedDeskRouteImport } from './routes/_authenticated/desk'
+import { Route as AuthenticatedFxRouteImport } from './routes/_authenticated/fx'
 import { Route as AuthenticatedScoutRouteImport } from './routes/_authenticated/scout'
 import { Route as AuthenticatedRewardsIndexRouteImport } from './routes/_authenticated/rewards/index'
 import { Route as AuthenticatedRewardsAccountsRouteImport } from './routes/_authenticated/rewards/accounts'
@@ -26,6 +27,7 @@ import { Route as AuthenticatedRewardsPipelineRouteImport } from './routes/_auth
 import { Route as ApiCronDeskCycleRouteImport } from './routes/api/cron/desk-cycle'
 import { Route as ApiCronDeskExecuteRouteImport } from './routes/api/cron/desk-execute'
 import { Route as ApiCronDeskUniverseRouteImport } from './routes/api/cron/desk-universe'
+import { Route as ApiCronFxTickRouteImport } from './routes/api/cron/fx-tick'
 import { Route as ApiCronHlSyncRouteImport } from './routes/api/cron/hl-sync'
 import { Route as ApiCronLiveReconcileRouteImport } from './routes/api/cron/live-reconcile'
 import { Route as ApiCronSmCopyRouteImport } from './routes/api/cron/sm-copy'
@@ -62,6 +64,11 @@ const AuthenticatedBacktestRoute = AuthenticatedBacktestRouteImport.update({
 const AuthenticatedDeskRoute = AuthenticatedDeskRouteImport.update({
   id: '/desk',
   path: '/desk',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedFxRoute = AuthenticatedFxRouteImport.update({
+  id: '/fx',
+  path: '/fx',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedScoutRoute = AuthenticatedScoutRouteImport.update({
@@ -126,6 +133,11 @@ const ApiCronDeskUniverseRoute = ApiCronDeskUniverseRouteImport.update({
   path: '/api/cron/desk-universe',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronFxTickRoute = ApiCronFxTickRouteImport.update({
+  id: '/api/cron/fx-tick',
+  path: '/api/cron/fx-tick',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiCronHlSyncRoute = ApiCronHlSyncRouteImport.update({
   id: '/api/cron/hl-sync',
   path: '/api/cron/hl-sync',
@@ -173,6 +185,7 @@ export interface FileRoutesByFullPath {
   '/agents': typeof AuthenticatedAgentsRoute
   '/backtest': typeof AuthenticatedBacktestRoute
   '/desk': typeof AuthenticatedDeskRoute
+  '/fx': typeof AuthenticatedFxRoute
   '/scout': typeof AuthenticatedScoutRoute
   '/rewards/accounts': typeof AuthenticatedRewardsAccountsRoute
   '/rewards/agents': typeof AuthenticatedRewardsAgentsRoute
@@ -183,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/api/cron/desk-cycle': typeof ApiCronDeskCycleRoute
   '/api/cron/desk-execute': typeof ApiCronDeskExecuteRoute
   '/api/cron/desk-universe': typeof ApiCronDeskUniverseRoute
+  '/api/cron/fx-tick': typeof ApiCronFxTickRoute
   '/api/cron/hl-sync': typeof ApiCronHlSyncRoute
   '/api/cron/live-reconcile': typeof ApiCronLiveReconcileRoute
   '/api/cron/sm-copy': typeof ApiCronSmCopyRoute
@@ -198,6 +212,7 @@ export interface FileRoutesByTo {
   '/agents': typeof AuthenticatedAgentsRoute
   '/backtest': typeof AuthenticatedBacktestRoute
   '/desk': typeof AuthenticatedDeskRoute
+  '/fx': typeof AuthenticatedFxRoute
   '/scout': typeof AuthenticatedScoutRoute
   '/': typeof AuthenticatedIndexRoute
   '/rewards/accounts': typeof AuthenticatedRewardsAccountsRoute
@@ -209,6 +224,7 @@ export interface FileRoutesByTo {
   '/api/cron/desk-cycle': typeof ApiCronDeskCycleRoute
   '/api/cron/desk-execute': typeof ApiCronDeskExecuteRoute
   '/api/cron/desk-universe': typeof ApiCronDeskUniverseRoute
+  '/api/cron/fx-tick': typeof ApiCronFxTickRoute
   '/api/cron/hl-sync': typeof ApiCronHlSyncRoute
   '/api/cron/live-reconcile': typeof ApiCronLiveReconcileRoute
   '/api/cron/sm-copy': typeof ApiCronSmCopyRoute
@@ -226,6 +242,7 @@ export interface FileRoutesById {
   '/_authenticated/agents': typeof AuthenticatedAgentsRoute
   '/_authenticated/backtest': typeof AuthenticatedBacktestRoute
   '/_authenticated/desk': typeof AuthenticatedDeskRoute
+  '/_authenticated/fx': typeof AuthenticatedFxRoute
   '/_authenticated/scout': typeof AuthenticatedScoutRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/rewards/accounts': typeof AuthenticatedRewardsAccountsRoute
@@ -237,6 +254,7 @@ export interface FileRoutesById {
   '/api/cron/desk-cycle': typeof ApiCronDeskCycleRoute
   '/api/cron/desk-execute': typeof ApiCronDeskExecuteRoute
   '/api/cron/desk-universe': typeof ApiCronDeskUniverseRoute
+  '/api/cron/fx-tick': typeof ApiCronFxTickRoute
   '/api/cron/hl-sync': typeof ApiCronHlSyncRoute
   '/api/cron/live-reconcile': typeof ApiCronLiveReconcileRoute
   '/api/cron/sm-copy': typeof ApiCronSmCopyRoute
@@ -255,6 +273,7 @@ export interface FileRouteTypes {
     | '/agents'
     | '/backtest'
     | '/desk'
+    | '/fx'
     | '/scout'
     | '/rewards/accounts'
     | '/rewards/agents'
@@ -265,6 +284,7 @@ export interface FileRouteTypes {
     | '/api/cron/desk-cycle'
     | '/api/cron/desk-execute'
     | '/api/cron/desk-universe'
+    | '/api/cron/fx-tick'
     | '/api/cron/hl-sync'
     | '/api/cron/live-reconcile'
     | '/api/cron/sm-copy'
@@ -280,6 +300,7 @@ export interface FileRouteTypes {
     | '/agents'
     | '/backtest'
     | '/desk'
+    | '/fx'
     | '/scout'
     | '/'
     | '/rewards/accounts'
@@ -291,6 +312,7 @@ export interface FileRouteTypes {
     | '/api/cron/desk-cycle'
     | '/api/cron/desk-execute'
     | '/api/cron/desk-universe'
+    | '/api/cron/fx-tick'
     | '/api/cron/hl-sync'
     | '/api/cron/live-reconcile'
     | '/api/cron/sm-copy'
@@ -307,6 +329,7 @@ export interface FileRouteTypes {
     | '/_authenticated/agents'
     | '/_authenticated/backtest'
     | '/_authenticated/desk'
+    | '/_authenticated/fx'
     | '/_authenticated/scout'
     | '/_authenticated/'
     | '/_authenticated/rewards/accounts'
@@ -318,6 +341,7 @@ export interface FileRouteTypes {
     | '/api/cron/desk-cycle'
     | '/api/cron/desk-execute'
     | '/api/cron/desk-universe'
+    | '/api/cron/fx-tick'
     | '/api/cron/hl-sync'
     | '/api/cron/live-reconcile'
     | '/api/cron/sm-copy'
@@ -335,6 +359,7 @@ export interface RootRouteChildren {
   ApiCronDeskCycleRoute: typeof ApiCronDeskCycleRoute
   ApiCronDeskExecuteRoute: typeof ApiCronDeskExecuteRoute
   ApiCronDeskUniverseRoute: typeof ApiCronDeskUniverseRoute
+  ApiCronFxTickRoute: typeof ApiCronFxTickRoute
   ApiCronHlSyncRoute: typeof ApiCronHlSyncRoute
   ApiCronLiveReconcileRoute: typeof ApiCronLiveReconcileRoute
   ApiCronSmCopyRoute: typeof ApiCronSmCopyRoute
@@ -387,6 +412,13 @@ declare module '@tanstack/react-router' {
       path: '/desk'
       fullPath: '/desk'
       preLoaderRoute: typeof AuthenticatedDeskRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/fx': {
+      id: '/_authenticated/fx'
+      path: '/fx'
+      fullPath: '/fx'
+      preLoaderRoute: typeof AuthenticatedFxRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/scout': {
@@ -466,6 +498,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronDeskUniverseRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/fx-tick': {
+      id: '/api/cron/fx-tick'
+      path: '/api/cron/fx-tick'
+      fullPath: '/api/cron/fx-tick'
+      preLoaderRoute: typeof ApiCronFxTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/cron/hl-sync': {
       id: '/api/cron/hl-sync'
       path: '/api/cron/hl-sync'
@@ -529,6 +568,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAgentsRoute: typeof AuthenticatedAgentsRoute
   AuthenticatedBacktestRoute: typeof AuthenticatedBacktestRoute
   AuthenticatedDeskRoute: typeof AuthenticatedDeskRoute
+  AuthenticatedFxRoute: typeof AuthenticatedFxRoute
   AuthenticatedScoutRoute: typeof AuthenticatedScoutRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedRewardsAccountsRoute: typeof AuthenticatedRewardsAccountsRoute
@@ -544,6 +584,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAgentsRoute: AuthenticatedAgentsRoute,
   AuthenticatedBacktestRoute: AuthenticatedBacktestRoute,
   AuthenticatedDeskRoute: AuthenticatedDeskRoute,
+  AuthenticatedFxRoute: AuthenticatedFxRoute,
   AuthenticatedScoutRoute: AuthenticatedScoutRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedRewardsAccountsRoute: AuthenticatedRewardsAccountsRoute,
@@ -564,6 +605,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCronDeskCycleRoute: ApiCronDeskCycleRoute,
   ApiCronDeskExecuteRoute: ApiCronDeskExecuteRoute,
   ApiCronDeskUniverseRoute: ApiCronDeskUniverseRoute,
+  ApiCronFxTickRoute: ApiCronFxTickRoute,
   ApiCronHlSyncRoute: ApiCronHlSyncRoute,
   ApiCronLiveReconcileRoute: ApiCronLiveReconcileRoute,
   ApiCronSmCopyRoute: ApiCronSmCopyRoute,

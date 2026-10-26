@@ -202,6 +202,13 @@ export function summarizeRun(key: string, r: Any): RunNote {
           : `All ${n(r.coins)} coins fresh`,
       };
     }
+    case "fx_engine": {
+      const closed = list(r.closed);
+      const parts = [`${n(r.quotes)} quotes`, `${plural(n(r.checked), "open position")} checked`];
+      if (closed.length) parts.push(`closed ${names(closed)}`);
+      if (n(r.candles)) parts.push(`${n(r.candles)} candles`);
+      return { status: n(r.quotes) < 5 ? "warning" : "ok", items: n(r.checked), summary: parts.join(" · ") };
+    }
     case "copy_backtest": {
       const v = r.variants ?? {};
       const part = (label: string, x: Any) =>
