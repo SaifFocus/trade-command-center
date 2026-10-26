@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { runCycleFn, runExecuteFn, setKillSwitchFn } from "@/lib/hl/desk.functions";
 import { LivePanel } from "@/components/desk/LivePanel";
 import { InvoTickets } from "@/components/desk/InvoTickets";
+import { TradeGrid } from "@/components/desk/TradeGrid";
 import type { Database } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/_authenticated/desk")({
@@ -128,6 +129,7 @@ function DeskPage() {
         </div>
       </header>
       <main className="mx-auto max-w-[1600px] space-y-4 px-6 py-6">
+        <TradeGrid usdSek={usdSek} />
         <div className="flex flex-wrap items-center gap-3">
           <button disabled={busy} onClick={() => act("CYCLE", () => cycle())} className="rounded border border-border bg-terminal px-3 py-1.5 text-xs tracking-widest text-neon hover:opacity-80 disabled:opacity-40">RUN CYCLE</button>
           <button disabled={busy} onClick={() => act("EXECUTE", () => execute())} className="rounded border border-border bg-terminal px-3 py-1.5 text-xs tracking-widest text-neon hover:opacity-80 disabled:opacity-40">RUN EXECUTE</button>
