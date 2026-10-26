@@ -15,6 +15,7 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAgentsRouteImport } from './routes/_authenticated/agents'
 import { Route as AuthenticatedBacktestRouteImport } from './routes/_authenticated/backtest'
 import { Route as AuthenticatedDeskRouteImport } from './routes/_authenticated/desk'
+import { Route as AuthenticatedFxRouteImport } from './routes/_authenticated/fx'
 import { Route as AuthenticatedScoutRouteImport } from './routes/_authenticated/scout'
 import { Route as AuthenticatedRewardsIndexRouteImport } from './routes/_authenticated/rewards/index'
 import { Route as AuthenticatedRewardsAccountsRouteImport } from './routes/_authenticated/rewards/accounts'
@@ -63,6 +64,11 @@ const AuthenticatedBacktestRoute = AuthenticatedBacktestRouteImport.update({
 const AuthenticatedDeskRoute = AuthenticatedDeskRouteImport.update({
   id: '/desk',
   path: '/desk',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedFxRoute = AuthenticatedFxRouteImport.update({
+  id: '/fx',
+  path: '/fx',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedScoutRoute = AuthenticatedScoutRouteImport.update({
@@ -179,6 +185,7 @@ export interface FileRoutesByFullPath {
   '/agents': typeof AuthenticatedAgentsRoute
   '/backtest': typeof AuthenticatedBacktestRoute
   '/desk': typeof AuthenticatedDeskRoute
+  '/fx': typeof AuthenticatedFxRoute
   '/scout': typeof AuthenticatedScoutRoute
   '/rewards/accounts': typeof AuthenticatedRewardsAccountsRoute
   '/rewards/agents': typeof AuthenticatedRewardsAgentsRoute
@@ -205,6 +212,7 @@ export interface FileRoutesByTo {
   '/agents': typeof AuthenticatedAgentsRoute
   '/backtest': typeof AuthenticatedBacktestRoute
   '/desk': typeof AuthenticatedDeskRoute
+  '/fx': typeof AuthenticatedFxRoute
   '/scout': typeof AuthenticatedScoutRoute
   '/': typeof AuthenticatedIndexRoute
   '/rewards/accounts': typeof AuthenticatedRewardsAccountsRoute
@@ -234,6 +242,7 @@ export interface FileRoutesById {
   '/_authenticated/agents': typeof AuthenticatedAgentsRoute
   '/_authenticated/backtest': typeof AuthenticatedBacktestRoute
   '/_authenticated/desk': typeof AuthenticatedDeskRoute
+  '/_authenticated/fx': typeof AuthenticatedFxRoute
   '/_authenticated/scout': typeof AuthenticatedScoutRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/rewards/accounts': typeof AuthenticatedRewardsAccountsRoute
@@ -264,6 +273,7 @@ export interface FileRouteTypes {
     | '/agents'
     | '/backtest'
     | '/desk'
+    | '/fx'
     | '/scout'
     | '/rewards/accounts'
     | '/rewards/agents'
@@ -290,6 +300,7 @@ export interface FileRouteTypes {
     | '/agents'
     | '/backtest'
     | '/desk'
+    | '/fx'
     | '/scout'
     | '/'
     | '/rewards/accounts'
@@ -318,6 +329,7 @@ export interface FileRouteTypes {
     | '/_authenticated/agents'
     | '/_authenticated/backtest'
     | '/_authenticated/desk'
+    | '/_authenticated/fx'
     | '/_authenticated/scout'
     | '/_authenticated/'
     | '/_authenticated/rewards/accounts'
@@ -400,6 +412,13 @@ declare module '@tanstack/react-router' {
       path: '/desk'
       fullPath: '/desk'
       preLoaderRoute: typeof AuthenticatedDeskRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/fx': {
+      id: '/_authenticated/fx'
+      path: '/fx'
+      fullPath: '/fx'
+      preLoaderRoute: typeof AuthenticatedFxRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/scout': {
@@ -549,6 +568,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAgentsRoute: typeof AuthenticatedAgentsRoute
   AuthenticatedBacktestRoute: typeof AuthenticatedBacktestRoute
   AuthenticatedDeskRoute: typeof AuthenticatedDeskRoute
+  AuthenticatedFxRoute: typeof AuthenticatedFxRoute
   AuthenticatedScoutRoute: typeof AuthenticatedScoutRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedRewardsAccountsRoute: typeof AuthenticatedRewardsAccountsRoute
@@ -564,6 +584,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAgentsRoute: AuthenticatedAgentsRoute,
   AuthenticatedBacktestRoute: AuthenticatedBacktestRoute,
   AuthenticatedDeskRoute: AuthenticatedDeskRoute,
+  AuthenticatedFxRoute: AuthenticatedFxRoute,
   AuthenticatedScoutRoute: AuthenticatedScoutRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedRewardsAccountsRoute: AuthenticatedRewardsAccountsRoute,
