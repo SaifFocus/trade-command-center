@@ -214,11 +214,15 @@ async function snapshot(db: DB, cfgRow: CfgRow, note: string) {
 export async function runCycle(db: DB) {
   const out: Record<string, unknown> = {};
   const extras = (await getCfg(db)).paper_extra_coins ?? [];
+  // Coins with open paper positions (shadows too) stay synced after they leave the paper universe: without fresh
+  // candles managePositions skips them, so their stops, targets and time exits would never be checked.
+  const { data: held } = await db.from("paper_positions").select("coin").eq("status", "open");
+  const keep = Array.from(new Set([...extras, ...(held ?? []).map((r) => r.coin)]));
   try {
     const { data: last } = await db.from("hl_universe").select("snapshot_at").order("snapshot_at", { ascending: false }).limit(1);
     const lastT = last?.[0]?.snapshot_at ? Date.parse(last[0].snapshot_at) : 0;
     if (Date.now() - lastT < 30 * 60_000) out.sync = "skipped (synced < 30 min ago)";
-    else out.sync = `${(await syncAll(db, extras)).coins.length} coins`;
+    else out.sync = `${(await syncAll(db, keep)).coins.length} coins`;
   } catch (e) {
     out.sync = `error: ${e instanceof Error ? e.message : e}`;
     await log(db, `Market sync failed: ${out.sync}`, "ERROR");
